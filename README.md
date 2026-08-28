@@ -44,7 +44,7 @@ From this repo, as a local marketplace:
 
 ```
 /plugin marketplace add /path/to/swym-thememate-plugin
-/plugin install swym-thememate@swym-thememate-plugin
+/plugin install swym@swym-thememate-plugin
 ```
 
 Once this repo has a GitHub remote, the same two commands work with the
@@ -56,7 +56,7 @@ Just talk to Claude Code once the plugin is installed -- ThemeMate's
 description-based trigger picks it up for Swym feature work. Ask a knowledge
 question, describe a bug, or describe something to build; ThemeMate
 classifies the mode and platform itself (see
-`skills/swym-thememate/SKILL.md`).
+`skills/thememate/SKILL.md`).
 
 For Shopify implementation and debug-with-a-fix work, ThemeMate always
 presents a plan and waits for your explicit confirmation before writing or
@@ -68,7 +68,7 @@ pushing anything -- see SKILL.md Section 4.
 .claude-plugin/
   plugin.json       # plugin manifest
   marketplace.json  # self-referencing marketplace so this repo is installable on its own
-skills/swym-thememate/
+skills/thememate/
   SKILL.md          # entry point: roles, modes, platform routing, the plan-before-edit gate
   references/
     roles.md              # agency / merchant / swym_internal detection

@@ -1,5 +1,5 @@
 ---
-name: swym-thememate
+name: thememate
 description: >
   ThemeMate -- Swym API-aware assistant for implementing and debugging Swym
   features (Wishlist Plus, Save For Later, Back In Stock, Recently Viewed,
