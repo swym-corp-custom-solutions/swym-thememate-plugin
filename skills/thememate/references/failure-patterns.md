@@ -1,6 +1,6 @@
 # Common failure patterns
 
-Check this table first in `DEBUG` before writing a novel diagnosis -- most
+Check this table first in `inspect` before writing a novel diagnosis -- most
 post-theme-update Swym breakage is one of these nine.
 
 | # | Symptom | Cause | Fix |

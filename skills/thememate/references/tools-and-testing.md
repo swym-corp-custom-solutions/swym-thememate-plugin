@@ -9,13 +9,13 @@ plan-before-edit gate) applies whenever a row below involves Write, Edit, or
 
 | Mode | Platform | Tools |
 |---|---|---|
-| `KNOWLEDGE_BASE` | any | Reasoning plus [rest-api.md](rest-api.md) / [js-api.md](js-api.md) / [other-platforms.md](other-platforms.md). Use the Swym Developer Docs MCP if connected (discover the right `mcp__swym-dev-docs__*` tool via ToolSearch); otherwise web search against Swym's public developer docs. No file or CLI tools. |
-| `DEBUG` | Shopify | `shopify theme list` / `shopify theme pull` to get the real files (never diagnose from memory or assumption); `grep`/Read to inspect them; a browser-automation MCP (Playwright MCP, or `chrome-devtools` MCP if already connected) against the live dev server for DOM state, console errors, and network requests. Code that reads as correct can still be broken in a way only a live check reveals -- don't report a status from static reading alone. |
-| `DEBUG` | other platforms | Reasoning plus reference docs only, same as `KNOWLEDGE_BASE`. No pull, no file inspection -- output stays suggestions and a plain-language description of the likely cause, never a diff. |
-| `IMPLEMENTATION` | Shopify | `shopify theme pull`; `shopify theme dev` for local preview; `shopify theme push --unpublished` for the duplicate theme (never `--allow-live`); `git` for local version control; `gh` for the GitHub remote and PR once the user opts in; grep to find the anchor, Read the surrounding lines, then Edit to patch (never blind-overwrite a large file); Write only for genuinely new files. |
-| `IMPLEMENTATION` | other platforms | Out of scope -- state that plainly. Fall back to a `KNOWLEDGE_BASE`-style answer describing what would need to change. |
+| `ask` | any | Reasoning plus [rest-api.md](rest-api.md) / [js-api.md](js-api.md) / [other-platforms.md](other-platforms.md). Use the Swym Developer Docs MCP if connected (discover the right `mcp__swym-dev-docs__*` tool via ToolSearch); otherwise web search against Swym's public developer docs. No file or CLI tools. |
+| `inspect` | Shopify | `shopify theme list` / `shopify theme pull` to get the real files (never diagnose from memory or assumption); `grep`/Read to inspect them; a browser-automation MCP (Playwright MCP, or `chrome-devtools` MCP if already connected) against the live dev server for DOM state, console errors, and network requests. Code that reads as correct can still be broken in a way only a live check reveals -- don't report a status from static reading alone. |
+| `inspect` | other platforms | Reasoning plus reference docs only, same as `ask`. No pull, no file inspection -- output stays suggestions and a plain-language description of the likely cause, never a diff. |
+| `edit` | Shopify | `shopify theme pull`; `shopify theme dev` for local preview; `shopify theme push --unpublished` for the duplicate theme (never `--allow-live`); `git` for local version control; `gh` for the GitHub remote and PR once the user opts in; grep to find the anchor, Read the surrounding lines, then Edit to patch (never blind-overwrite a large file); Write only for genuinely new files. |
+| `edit` | other platforms | Out of scope -- state that plainly. Fall back to an `ask`-style answer describing what would need to change. |
 
-**If no browser-automation MCP is connected** when `DEBUG` or local-preview
+**If no browser-automation MCP is connected** when `inspect` or local-preview
 validation needs one, say so plainly and ask the user to connect the
 Playwright MCP or `chrome-devtools` MCP before continuing -- don't silently
 skip DOM/console validation or guess at live state from the code alone.
@@ -41,7 +41,7 @@ Check [failure-patterns.md](failure-patterns.md) against the symptom before
 writing a novel diagnosis -- most post-theme-update Swym breakage is already
 one of the nine patterns documented there.
 
-`DEBUG` on Shopify ends with a feature-status table (what's present, what's
+`inspect` on Shopify ends with a feature-status table (what's present, what's
 missing, source of truth = the live DOM, not just the file). When acting for
 `swym_internal` / Support (see [roles.md](roles.md)), also produce a
 paste-ready block:
@@ -93,7 +93,7 @@ overrides). Schema alone shows what's *possible*, including built-in features
 that may already solve part of the ask with zero theme code; data overrides
 show what's actually *on* right now. Don't infer one from the other.
 
-**Leave the store as you found it.** Any DEBUG or local-preview action that
+**Leave the store as you found it.** Any inspect or local-preview action that
 mutates real backend state -- wishlist add/remove, stock-alert subscribe,
 list create, etc. -- against a real store, dev or otherwise, must be reverted
 before the session ends.

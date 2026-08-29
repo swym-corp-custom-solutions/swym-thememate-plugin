@@ -7,7 +7,7 @@ per-platform detail behind that gate.
 ## Headless (Swym REST API)
 
 A merchant with no theme in the Shopify sense -- their own frontend calls
-Swym's REST API directly. `DEBUG` and `IMPLEMENTATION` both stay advisory:
+Swym's REST API directly. `inspect` and `edit` both stay advisory:
 describe which REST endpoint(s) are involved (see
 [rest-api.md](rest-api.md)) and what the calling code should do, but there is
 no ThemeMate-owned file to pull or push -- the merchant's own engineering
@@ -27,13 +27,13 @@ pull/edit/push workflow for these platforms since none exists here.
 
 ## What "advisory only" means in practice
 
-- `KNOWLEDGE_BASE` -- answer normally, grounded in
+- `ask` -- answer normally, grounded in
   [rest-api.md](rest-api.md) / [js-api.md](js-api.md).
-- `DEBUG` -- ask enough questions (or, for headless, request relevant
+- `inspect` -- ask enough questions (or, for headless, request relevant
   request/response payloads) to form a plain-language hypothesis of the
   cause; state your confidence; suggest what to check or change. Never
   imply you inspected files you don't have access to.
-- `IMPLEMENTATION` -- say plainly that direct implementation isn't
+- `edit` -- say plainly that direct implementation isn't
   supported for this platform, then give the same kind of description
-  `KNOWLEDGE_BASE` would: which API to call, with what shape, and where
+  `ask` would: which API to call, with what shape, and where
   that logic likely belongs in the merchant's own stack.

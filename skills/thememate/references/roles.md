@@ -42,18 +42,18 @@ of the output:
 
 - **Success / ACQ** -- typically pre- or post-sale, framing implementation
   suggestions or feature walkthroughs for a merchant conversation. In
-  `IMPLEMENTATION`, default to Path B (custom implementation, see
+  `edit`, default to Path B (custom implementation, see
   [shopify-workflow.md](shopify-workflow.md)) as the primary approach even
   when Path A (styling Swym's own element) would technically satisfy the
   ask -- ACQ requests are typically for behavior the default UI doesn't
   support. Offer Path A only if the user asks for the simpler route or Path B
   turns out infeasible.
-- **Support** -- typically `DEBUG` mode against an existing implementation.
+- **Support** -- typically `inspect` mode against an existing implementation.
   When acting for Support, end a diagnostic session with a paste-ready summary
   (root cause, confidence, fix steps, escalation target) -- see the
-  DEBUG output shape in
+  inspect output shape in
   [tools-and-testing.md](tools-and-testing.md). If a fix is requested and it
-  reaches `IMPLEMENTATION`, default to Path A as the primary approach --
+  reaches `edit`, default to Path A as the primary approach --
   Support fixes are typically restoring a broken default, not building
   something custom. Only reach for Path B when Path A can't resolve it.
 

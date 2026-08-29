@@ -9,7 +9,7 @@ description: >
   suggestions only -- no theme pull, edit, or push. Use when asked to
   implement, debug, or explain a Swym feature on any storefront.
 metadata:
-  version: 0.1.0
+  version: 0.1.1
 ---
 
 # ThemeMate
@@ -53,12 +53,12 @@ else:
 
 | Mode | Trigger | What you produce |
 |---|---|---|
-| `KNOWLEDGE_BASE` | "how do I implement X", "what does the Swym JS API do for Y" -- a conceptual or how-to question, any platform | An explanation, grounded in [references/rest-api.md](references/rest-api.md) / [references/js-api.md](references/js-api.md). No file or CLI access needed. |
-| `DEBUG` | "X isn't showing/working on the storefront, check why" -- something that should work isn't | A diagnosis against the real, live implementation -- see Section 3 for what "real" means per platform. |
-| `IMPLEMENTATION` | "build/add X" -- new work, may include a Figma reference or a design description | A plan, then (once confirmed) the actual change -- see Section 3 and the gate in Section 4. |
+| `ask` | "how do I implement X", "what does the Swym JS API do for Y" -- a conceptual or how-to question, any platform | An explanation, grounded in [references/rest-api.md](references/rest-api.md) / [references/js-api.md](references/js-api.md). No file or CLI access needed. |
+| `inspect` | "X isn't showing/working on the storefront, check why" -- something that should work isn't | A diagnosis against the real, live implementation -- see Section 3 for what "real" means per platform. |
+| `edit` | "build/add X" -- new work, may include a Figma reference or a design description | A plan, then (once confirmed) the actual change -- see Section 3 and the gate in Section 4. |
 
-A session can move between modes (e.g. `DEBUG` finds a real gap and becomes
-`IMPLEMENTATION` once the user asks for the fix) -- re-check Section 3's gate
+A session can move between modes (e.g. `inspect` finds a real gap and becomes
+`edit` once the user asks for the fix) -- re-check Section 3's gate
 and Section 4's plan-before-edit rule every time a mode transition would
 result in writing a file.
 
@@ -66,12 +66,12 @@ result in writing a file.
 
 ## 3. Platform routing (hard gate)
 
-| Platform | `DEBUG` | `IMPLEMENTATION` |
+| Platform | `inspect` | `edit` |
 |---|---|---|
 | **Shopify** | Pull the real theme, inspect files, probe the live dev server. Full diagnostic capability. | Full workflow: theme pull -> plan -> edit -> local preview -> push to a duplicate (unpublished) theme -> optionally connect GitHub for version control. See [references/shopify-workflow.md](references/shopify-workflow.md). |
-| **Other platforms** (headless via Swym REST API, BigCommerce, WooCommerce, Wix, ...) | Advisory only: suggestions and a plain-language description of what's likely wrong. Never pull, edit, or push theme/store code. | Out of scope. Say so plainly, then offer the same advisory description of what *would* need to change, as a `KNOWLEDGE_BASE`-style answer -- do not attempt code changes. |
+| **Other platforms** (headless via Swym REST API, BigCommerce, WooCommerce, Wix, ...) | Advisory only: suggestions and a plain-language description of what's likely wrong. Never pull, edit, or push theme/store code. | Out of scope. Say so plainly, then offer the same advisory description of what *would* need to change, as an `ask`-style answer -- do not attempt code changes. |
 
-`KNOWLEDGE_BASE` mode is unaffected by this gate -- it answers conceptually on
+`ask` mode is unaffected by this gate -- it answers conceptually on
 any platform.
 
 See [references/other-platforms.md](references/other-platforms.md) for the
@@ -82,8 +82,8 @@ per-platform detail behind the "advisory only" row.
 ## 4. Implementation gate: plan before edit (hard rule)
 
 **Never call Write, Edit, `rm`, or `shopify theme push` straight from the
-user's ask** -- on Shopify, in either `DEBUG` (once a fix is requested) or
-`IMPLEMENTATION` mode. The sequence is always:
+user's ask** -- on Shopify, in either `inspect` (once a fix is requested) or
+`edit` mode. The sequence is always:
 
 1. **Discovery** -- pull the theme, read the relevant files.
 2. **Analysis** -- understand the current state and what the ask actually requires.
@@ -113,7 +113,7 @@ when a test fails.
 
 ## 6. Safety and anti-hallucination
 
-- Never push to a **live/published** Shopify theme. All `IMPLEMENTATION` work
+- Never push to a **live/published** Shopify theme. All `edit` work
   lands on an unpublished duplicate theme (`shopify theme push` without
   `--allow-live`).
 - Never run a destructive git operation (`reset --hard`, force-push, history

@@ -1,6 +1,6 @@
 # Shopify workflow
 
-The full sequence for `DEBUG` (once a fix is requested) and `IMPLEMENTATION`
+The full sequence for `inspect` (once a fix is requested) and `edit`
 on Shopify, per SKILL.md Section 3's platform gate. Every step's concrete
 tooling is in [tools-and-testing.md](tools-and-testing.md); this file is the
 order and the reasoning for it.
