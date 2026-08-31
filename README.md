@@ -10,34 +10,6 @@ Wix) -- no theme pull, edit, or push there.
 Who this is for: Agency Partners, Merchants, and Swym Internal staff
 (Success, Support, ACQ).
 
-## Prerequisites
-
-**1. Claude Code**
-```bash
-npm install -g @anthropic-ai/claude-code
-claude login
-```
-
-**2. Node.js 18+**
-```bash
-node --version   # must be >= 18.0.0
-```
-
-**3. Shopify CLI** (Shopify storefront work only)
-```bash
-npm install -g @shopify/cli@latest
-shopify auth login
-```
-
-**4. `gh` CLI** (only if you want GitHub version control on your changes)
-```bash
-gh auth login
-```
-
-**5. A browser-automation MCP server**, for local-preview validation --
-either the Playwright MCP or the `chrome-devtools` MCP, whichever your
-Claude Code setup already has connected.
-
 ## Install
 
 Marketplace: `swym-corp-custom-solutions/swym-thememate-plugin`. Plugin name: `swym`.
@@ -123,6 +95,34 @@ skills/thememate/
     js-api.md             # Swym JS API (Shopify/BigCommerce)
     other-platforms.md    # knowledge-only support matrix
 ```
+
+## Prerequisites
+
+**1. Claude Code**
+```bash
+npm install -g @anthropic-ai/claude-code
+claude login
+```
+
+**2. Node.js 18+**
+```bash
+node --version   # must be >= 18.0.0
+```
+
+**3. Shopify CLI** (Shopify storefront work only)
+```bash
+npm install -g @shopify/cli@latest
+shopify auth login
+```
+
+**4. `gh` CLI** (only if you want GitHub version control on your changes)
+```bash
+gh auth login
+```
+
+**5. A browser-automation MCP server**, for local-preview validation --
+either the Playwright MCP or the `chrome-devtools` MCP, whichever your
+Claude Code setup already has connected.
 
 ## Known gaps
 
