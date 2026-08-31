@@ -172,12 +172,22 @@ against the diff.
 
 ## 5. Push to a duplicate theme
 
-```bash
-shopify theme push --store <store>.myshopify.com --unpublished --theme "<name>" --path ./<slug>
-```
+**First push of a session:** list themes (`shopify theme list --store
+<store>.myshopify.com --json`), exclude `live`, and ask the user (up to 3
+recent unpublished themes plus "Create new", 4 choices max) whether to
+reuse one or create a new one.
 
-Never `--allow-live`. The merchant/agency reviews on the unpublished duplicate
-theme's preview link before deciding to make it live themselves.
+- **Create new:** name defaults to `ThemeMate x <live theme name> x Swym`
+  (editable), then `shopify theme push --unpublished --theme "<name>"`.
+- **Reuse:** `shopify theme push --theme <id>` (no `--unpublished`).
+
+Record the chosen theme id and reuse it for later pushes in the same
+session without re-asking, unless the user starts a new task or requests a
+different theme.
+
+Never `--allow-live` or touch the `live`-role theme. The merchant/agency
+reviews on the unpublished duplicate theme's preview link before deciding
+to make it live themselves.
 
 ## 6. GitHub (optional, user opts in)
 

@@ -20,6 +20,11 @@ validation needs one, say so plainly and ask the user to connect the
 Playwright MCP or `chrome-devtools` MCP before continuing -- don't silently
 skip DOM/console validation or guess at live state from the code alone.
 
+**If a connected browser tool is blocked by policy for a target, don't
+retry -- fall back to another connected browser-automation MCP.** If none
+is available, tell the user how to connect one rather than degrading to
+curl-only checks.
+
 If the user would rather you connect one yourself: with their go-ahead,
 launch a second, isolated Chrome instance with remote debugging enabled
 rather than closing or reusing their existing browser session --
@@ -75,14 +80,14 @@ validate against the printed local URL, cheapest check first:
 5. A screenshot -- **last resort only**, single component (not full-page),
    and only when none of the above resolved the question.
 
-**The local tunnel only proves markup, not Swym API behavior.** The
-`127.0.0.1` origin `shopify theme dev` serves from can get CORS-blocked by
-third-party backends whose allowlist only covers real store domains -- Swym's
-JS API included. A clean console there confirms Liquid/markup rendered
-correctly, but does not confirm `swat.*` calls actually work. To validate
-real Swym API behavior (list add/remove, social count, etc.), test against
-the pushed `--unpublished` theme's real preview URL
-(`https://<store>.myshopify.com/...?preview_theme_id=<id>`) instead.
+**Rendering is async, not CORS-blocked.** Poll or wait for a readiness
+signal before concluding a feature is absent -- don't check the DOM once
+immediately after navigation.
+
+**Stateful API behavior may be CORS-sensitive on `127.0.0.1` -- unverified.**
+Confirm via a live probe if relevant; otherwise test against the pushed
+theme's real preview URL
+(`https://<store>.myshopify.com/...?preview_theme_id=<id>`).
 
 **Cross-reference config before assuming App Embed behavior.** Before
 assuming what an App Embed block does or doesn't support, check
