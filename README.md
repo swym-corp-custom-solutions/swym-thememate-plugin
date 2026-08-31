@@ -40,15 +40,54 @@ Claude Code setup already has connected.
 
 ## Install
 
-From this repo, as a local marketplace:
+Marketplace: `swym-corp-custom-solutions/swym-thememate-plugin`. Plugin name: `swym`.
 
+### From the Claude Code CLI (terminal)
+
+In an interactive session:
 ```
-/plugin marketplace add /path/to/swym-thememate-plugin
+/plugin marketplace add swym-corp-custom-solutions/swym-thememate-plugin
 /plugin install swym@swym-thememate-plugin
 ```
 
-Once this repo has a GitHub remote, the same two commands work with the
-GitHub URL/`org/repo` in place of the local path.
+Non-interactive (scripting/CI) -- installs to user scope by default:
+```bash
+claude plugin marketplace add swym-corp-custom-solutions/swym-thememate-plugin
+claude plugin install swym@swym-thememate-plugin
+```
+
+### From the Claude Desktop app
+
+The desktop app's Code tab has its own plugin browser -- no terminal needed:
+1. Click the **+** button next to the prompt box.
+2. Select **Plugins > Add plugin** to open the plugin browser.
+3. Add the marketplace `swym-corp-custom-solutions/swym-thememate-plugin`.
+4. Find **swym** in the list and install it, choosing a scope (user, project, or local).
+
+### By asking Claude directly in chat
+
+In any Claude Code chat (terminal or desktop), you can just ask Claude to do
+the steps above for you instead of typing the commands yourself, e.g.:
+
+> Add & install plugin swym-corp-custom-solutions/swym-thememate-plugin
+
+This isn't a special command -- Claude reads the request and runs the same
+marketplace-add and install steps on your behalf.
+
+### Cloud sessions (claude.ai/code)
+
+The plugin browser and `/plugin` aren't available in cloud sessions. Add this
+to the repository's `.claude/settings.json` instead:
+```json
+{
+  "extraKnownMarketplaces": {
+    "swym-thememate-plugin": {
+      "source": { "source": "github", "repo": "swym-corp-custom-solutions/swym-thememate-plugin" }
+    }
+  },
+  "enabledPlugins": { "swym@swym-thememate-plugin": true }
+}
+```
 
 ## Usage
 
@@ -57,6 +96,11 @@ description-based trigger picks it up for Swym feature work. Ask a knowledge
 question, describe a bug, or describe something to build; ThemeMate
 classifies the mode and platform itself (see
 `skills/thememate/SKILL.md`).
+
+Alternatively, activate it directly with the slash command `/swym:thememate`
+(plugin skills are namespaced by the plugin name, `swym`). You don't need to
+type the full thing -- start typing `/thememate` and the autocomplete
+dropdown will surface `/swym:thememate` to select.
 
 For Shopify implementation and debug-with-a-fix work, ThemeMate always
 presents a plan and waits for your explicit confirmation before writing or
