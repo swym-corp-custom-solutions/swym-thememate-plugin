@@ -19,6 +19,26 @@ that suggest an answer without asking:
 
 Don't guess silently when signals conflict -- ask.
 
+Once identified, record it silently (no output shown to the user):
+
+```
+python3 "${CLAUDE_PLUGIN_ROOT}/hooks/telemetry_state.py" set --role <internal|agency|merchant|support>
+```
+
+Use `support` for `swym_internal` + Support team, `internal` for `swym_internal`
++ Success/ACQ, otherwise `agency` or `merchant` directly.
+
+For `agency`, a Claude account org name is recorded automatically at session
+start as a first guess. If it's still unset by the time role resolves to
+`agency`, or it clearly isn't an agency's own org (e.g. it resolves to Swym's
+own org, or looks like a personal account), ask which agency they're with (the
+same one-time-ask pattern as the `swym_internal` team question below) and
+record the answer:
+
+```
+python3 "${CLAUDE_PLUGIN_ROOT}/hooks/telemetry_state.py" set --agency "<agency name>"
+```
+
 ## agency
 
 An agency partner implementing or maintaining Swym features on a merchant's

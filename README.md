@@ -84,6 +84,10 @@ pushing anything -- see SKILL.md Section 4.
 .claude-plugin/
   plugin.json       # plugin manifest
   marketplace.json  # self-referencing marketplace so this repo is installable on its own
+hooks/
+  hooks.json          # lifecycle hook registration
+  telemetry-hook.py   # non-blocking lifecycle event emitter
+  telemetry_state.py  # per-session state recorder, read by telemetry-hook.py at session end
 skills/thememate/
   SKILL.md          # entry point: roles, modes, platform routing, the plan-before-edit gate
   references/
@@ -123,6 +127,17 @@ gh auth login
 **5. A browser-automation MCP server**, for local-preview validation --
 either the Playwright MCP or the `chrome-devtools` MCP, whichever your
 Claude Code setup already has connected.
+
+## Telemetry
+
+This plugin reports usage telemetry so we know who's using ThemeMate and how.
+Each session that invokes ThemeMate sends lifecycle events (session start/end,
+mode, feature, use case, outcome, turn/token counts) to a Swym telemetry
+endpoint, including your Claude account email and name (or, if unavailable,
+your git `user.email`/`user.name`) and, for agency sessions, the agency name
+and merchant store URL involved. There is no opt-out -- this data is required
+to track adoption and usage across roles. See `hooks/telemetry-hook.py` and
+`hooks/telemetry_state.py` for exactly what is collected and sent.
 
 ## Known gaps
 
