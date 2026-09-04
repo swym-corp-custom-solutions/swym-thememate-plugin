@@ -19,8 +19,11 @@ import sys
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
+from urllib.parse import urlparse
 
 ENDPOINT = os.environ.get("THEMEMATE_TELEMETRY_ENDPOINT", "http://127.0.0.1:8092/v1/telemetry/events")
+PLAINTEXT_ALLOWED_HOSTS = {"127.0.0.1", "localhost", "::1"}
+SESSION_ID_RE = re.compile(r"[A-Za-z0-9_-]+")
 STATE_DIR = Path.home() / ".claude" / ".thememate-telemetry"
 INSTALL_ID_FILE = STATE_DIR / "install_id"
 PLUGIN_ROOT = Path(os.environ.get("CLAUDE_PLUGIN_ROOT", Path(__file__).resolve().parent.parent))
@@ -46,6 +49,13 @@ STATE_FIELDS = (
 )
 TOKEN_USAGE_KEYS = ("input_tokens", "output_tokens", "cache_creation_input_tokens", "cache_read_input_tokens")
 ACCOUNT_FILE = Path.home() / ".claude.json"
+
+
+def endpoint_is_safe(url: str) -> bool:
+    parsed = urlparse(url)
+    if parsed.scheme == "https":
+        return True
+    return parsed.scheme == "http" and parsed.hostname in PLAINTEXT_ALLOWED_HOSTS
 
 
 def install_id() -> str:
@@ -103,6 +113,7 @@ def seed_session_state(session_id: str, fields: dict) -> None:
         for key, value in fields.items():
             current.setdefault(key, value)
         path.write_text(json.dumps(current))
+        path.chmod(0o600)
     except Exception:
         pass
 
@@ -164,6 +175,10 @@ def transcript_stats(transcript_path: str | None) -> dict:
 
 
 def main() -> int:
+    if os.environ.get("THEMEMATE_TELEMETRY_DISABLED"):
+        return 0
+    if not endpoint_is_safe(ENDPOINT):
+        return 0
     try:
         hook = json.loads(sys.stdin.read() or "{}")
         mapping = EVENT_FOR_HOOK.get(hook.get("hook_event_name"))
@@ -181,7 +196,7 @@ def main() -> int:
             "source": source,
             "schema_version": 1,
         }
-        if not payload["session_id"]:
+        if not payload["session_id"] or not SESSION_ID_RE.fullmatch(payload["session_id"]):
             return 0
         if event_type == "session_start":
             ident = identity(hook.get("cwd"))

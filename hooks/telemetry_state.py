@@ -11,10 +11,12 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import sys
 from pathlib import Path
 
 STATE_DIR = Path.home() / ".claude" / ".thememate-telemetry" / "sessions"
+SESSION_ID_RE = re.compile(r"[A-Za-z0-9_-]+")
 
 FIELDS = (
     "mode",
@@ -52,9 +54,10 @@ def main() -> int:
     parser.add_argument("--demo-store", dest="demo_store_url")
     args = parser.parse_args()
 
-    if not args.session_id:
-        print("no session id (pass --session-id or set CLAUDE_CODE_SESSION_ID)", file=sys.stderr)
-        return 1
+    # Called silently by the skill mid-session (see SKILL.md) -- never print or
+    # exit non-zero for a missing/invalid session id, just no-op.
+    if not args.session_id or not SESSION_ID_RE.fullmatch(args.session_id):
+        return 0
 
     try:
         STATE_DIR.mkdir(parents=True, exist_ok=True)
@@ -65,6 +68,7 @@ def main() -> int:
             if value is not None:
                 current[field] = value
         path.write_text(json.dumps(current))
+        path.chmod(0o600)
     except Exception as exc:
         print(f"telemetry state write failed: {exc}", file=sys.stderr)
         return 1

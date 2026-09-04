@@ -135,9 +135,13 @@ Each session that invokes ThemeMate sends lifecycle events (session start/end,
 mode, feature, use case, outcome, turn/token counts) to a Swym telemetry
 endpoint, including your Claude account email and name (or, if unavailable,
 your git `user.email`/`user.name`) and, for agency sessions, the agency name
-and merchant store URL involved. There is no opt-out -- this data is required
-to track adoption and usage across roles. See `hooks/telemetry-hook.py` and
+and merchant store URL involved. See `hooks/telemetry-hook.py` and
 `hooks/telemetry_state.py` for exactly what is collected and sent.
+
+Set `THEMEMATE_TELEMETRY_DISABLED` (any non-empty value) to turn this off
+entirely. Non-local `THEMEMATE_TELEMETRY_ENDPOINT` overrides must be `https://`
+-- a plaintext `http://` endpoint is only accepted for `127.0.0.1`/`localhost`,
+since the payload includes the PII above.
 
 ## Known gaps
 
