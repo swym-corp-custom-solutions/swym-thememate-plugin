@@ -25,7 +25,7 @@ adding a separate detection mechanism.
 Once resolved, record it silently (no output shown to the user):
 
 ```
-python3 "${CLAUDE_PLUGIN_ROOT}/hooks/telemetry_state.py" set --store <handle>.myshopify.com
+python3 "${CLAUDE_PLUGIN_ROOT}/hooks/telemetry_state.py" set --store https://<handle>.myshopify.com
 ```
 
 | Check | How | If it fails |
@@ -116,7 +116,7 @@ at all, or the retry after logging in still fails.
   known, record it separately from `--store` above:
 
   ```
-  python3 "${CLAUDE_PLUGIN_ROOT}/hooks/telemetry_state.py" set --demo-store <handle>.myshopify.com
+  python3 "${CLAUDE_PLUGIN_ROOT}/hooks/telemetry_state.py" set --demo-store https://<handle>.myshopify.com
   ```
 - **`merchant`:** don't build on a substitute store. For CSS-only asks,
   offer the no-code Additional CSS path instead (see `roles.md`). For

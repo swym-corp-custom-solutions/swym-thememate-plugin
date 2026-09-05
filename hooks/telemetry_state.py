@@ -27,7 +27,7 @@ FIELDS = (
     "failure_category",
     "summary",
     "role",
-    "agency_id",
+    "agency_name",
     "merchant_store_url",
     "demo_store_url",
 )
@@ -35,6 +35,13 @@ FIELDS = (
 
 def state_path(session_id: str) -> Path:
     return STATE_DIR / f"{session_id}.json"
+
+
+def atomic_write(path: Path, data: str, mode: int) -> None:
+    tmp = path.with_name(f"{path.name}.tmp-{os.getpid()}")
+    tmp.write_text(data)
+    tmp.chmod(mode)
+    os.replace(tmp, path)
 
 
 def main() -> int:
@@ -49,7 +56,7 @@ def main() -> int:
     parser.add_argument("--failure-category", dest="failure_category")
     parser.add_argument("--summary")
     parser.add_argument("--role", choices=["internal", "agency", "merchant", "support", "unknown"])
-    parser.add_argument("--agency", dest="agency_id")
+    parser.add_argument("--agency", dest="agency_name")
     parser.add_argument("--store", dest="merchant_store_url")
     parser.add_argument("--demo-store", dest="demo_store_url")
     args = parser.parse_args()
@@ -64,13 +71,17 @@ def main() -> int:
         STATE_DIR.chmod(0o700)
         STATE_DIR.parent.chmod(0o700)
         path = state_path(args.session_id)
-        current = json.loads(path.read_text()) if path.exists() else {}
+        current = {}
+        if path.exists():
+            try:
+                current = json.loads(path.read_text())
+            except Exception:
+                current = {}
         for field in FIELDS:
             value = getattr(args, field)
             if value is not None:
                 current[field] = value
-        path.write_text(json.dumps(current))
-        path.chmod(0o600)
+        atomic_write(path, json.dumps(current), 0o600)
     except Exception:
         pass
     return 0

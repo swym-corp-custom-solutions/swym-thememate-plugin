@@ -43,12 +43,21 @@ STATE_FIELDS = (
     "failure_category",
     "summary",
     "role",
-    "agency_id",
+    "agency_name",
     "merchant_store_url",
     "demo_store_url",
 )
 TOKEN_USAGE_KEYS = ("input_tokens", "output_tokens", "cache_creation_input_tokens", "cache_read_input_tokens")
 ACCOUNT_FILE = Path.home() / ".claude.json"
+SEND_SNIPPET = (
+    "import sys,urllib.request\n"
+    "req=urllib.request.Request(sys.argv[1], data=sys.argv[2].encode(), "
+    "headers={'Content-Type':'application/json'}, method='POST')\n"
+    "try:\n"
+    "    urllib.request.urlopen(req, timeout=3)\n"
+    "except Exception:\n"
+    "    pass\n"
+)
 
 
 def endpoint_is_safe(url: str) -> bool:
@@ -66,6 +75,13 @@ def ensure_state_dir(path: Path) -> None:
         path.chmod(0o700)
     except Exception:
         pass
+
+
+def atomic_write(path: Path, data: str, mode: int) -> None:
+    tmp = path.with_name(f"{path.name}.tmp-{os.getpid()}")
+    tmp.write_text(data)
+    tmp.chmod(mode)
+    os.replace(tmp, path)
 
 
 def install_id() -> str:
@@ -119,11 +135,15 @@ def seed_session_state(session_id: str, fields: dict) -> None:
     path = STATE_DIR / "sessions" / f"{session_id}.json"
     try:
         ensure_state_dir(path.parent)
-        current = json.loads(path.read_text()) if path.exists() else {}
+        current = {}
+        if path.exists():
+            try:
+                current = json.loads(path.read_text())
+            except Exception:
+                current = {}
         for key, value in fields.items():
             current.setdefault(key, value)
-        path.write_text(json.dumps(current))
-        path.chmod(0o600)
+        atomic_write(path, json.dumps(current), 0o600)
     except Exception:
         pass
 
@@ -134,11 +154,17 @@ def session_state_path(session_id: str) -> Path:
 
 def consume_session_state(session_id: str) -> dict:
     path = session_state_path(session_id)
+    if not path.exists():
+        return {}
     try:
-        if not path.exists():
-            return {}
-        data = json.loads(path.read_text())
-        path.unlink(missing_ok=True)
+        raw = path.read_text()
+    except Exception:
+        raw = None
+    path.unlink(missing_ok=True)
+    if raw is None:
+        return {}
+    try:
+        data = json.loads(raw)
     except Exception:
         return {}
     state = {k: v for k, v in data.items() if k in STATE_FIELDS and v is not None}
@@ -214,15 +240,14 @@ def main() -> int:
                 payload["email"] = ident["email"]
             if ident.get("name"):
                 payload["name"] = ident["name"]
-            seed_session_state(payload["session_id"], {"agency_id": ident.get("agency_guess")})
+            seed_session_state(payload["session_id"], {"agency_name": ident.get("agency_guess")})
         if event_type == "session_end":
             if not session_state_path(payload["session_id"]).exists():
                 return 0
             payload.update(consume_session_state(payload["session_id"]))
             payload.update(transcript_stats(hook.get("transcript_path")))
         subprocess.Popen(
-            ["curl", "-fsS", "--max-time", "3", "-X", "POST", ENDPOINT,
-             "-H", "Content-Type: application/json", "--data-binary", json.dumps(payload)],
+            [sys.executable, "-c", SEND_SNIPPET, ENDPOINT, json.dumps(payload)],
             stdout=subprocess.DEVNULL,
             stderr=subprocess.DEVNULL,
             start_new_session=True,
