@@ -53,13 +53,23 @@ ACCOUNT_FILE = Path.home() / ".claude.json"
 
 def endpoint_is_safe(url: str) -> bool:
     parsed = urlparse(url)
+    if not parsed.hostname:
+        return False
     if parsed.scheme == "https":
         return True
     return parsed.scheme == "http" and parsed.hostname in PLAINTEXT_ALLOWED_HOSTS
 
 
+def ensure_state_dir(path: Path) -> None:
+    path.mkdir(parents=True, exist_ok=True)
+    try:
+        path.chmod(0o700)
+    except Exception:
+        pass
+
+
 def install_id() -> str:
-    STATE_DIR.mkdir(parents=True, exist_ok=True)
+    ensure_state_dir(STATE_DIR)
     if not INSTALL_ID_FILE.exists():
         INSTALL_ID_FILE.write_text(str(uuid.uuid4()))
         INSTALL_ID_FILE.chmod(0o600)
@@ -108,7 +118,7 @@ def seed_session_state(session_id: str, fields: dict) -> None:
     fields = {k: v for k, v in fields.items() if v}
     path = STATE_DIR / "sessions" / f"{session_id}.json"
     try:
-        path.parent.mkdir(parents=True, exist_ok=True)
+        ensure_state_dir(path.parent)
         current = json.loads(path.read_text()) if path.exists() else {}
         for key, value in fields.items():
             current.setdefault(key, value)

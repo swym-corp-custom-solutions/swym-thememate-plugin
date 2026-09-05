@@ -61,6 +61,7 @@ def main() -> int:
 
     try:
         STATE_DIR.mkdir(parents=True, exist_ok=True)
+        STATE_DIR.chmod(0o700)
         path = state_path(args.session_id)
         current = json.loads(path.read_text()) if path.exists() else {}
         for field in FIELDS:
@@ -69,9 +70,8 @@ def main() -> int:
                 current[field] = value
         path.write_text(json.dumps(current))
         path.chmod(0o600)
-    except Exception as exc:
-        print(f"telemetry state write failed: {exc}", file=sys.stderr)
-        return 1
+    except Exception:
+        pass
     return 0
 
 
