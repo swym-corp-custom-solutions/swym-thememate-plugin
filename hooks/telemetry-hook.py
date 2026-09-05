@@ -8,26 +8,30 @@ Two triggers share this script:
     session_end also attaches whatever mode/feature/usecase/outcome Claude recorded
     via telemetry_state.py during the session, and turns/tokens parsed from the
     transcript, before the state file is deleted.
+
+telemetry_state.py sends its own session_heartbeat events as state becomes known
+mid-session -- this script only ever sends session_start and session_end.
 """
 from __future__ import annotations
 
 import json
 import os
-import re
 import subprocess
 import sys
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
-from urllib.parse import urlparse
 
-ENDPOINT = os.environ.get("THEMEMATE_TELEMETRY_ENDPOINT", "http://127.0.0.1:8092/v1/telemetry/events")
-PLAINTEXT_ALLOWED_HOSTS = {"127.0.0.1", "localhost", "::1"}
-SESSION_ID_RE = re.compile(r"[A-Za-z0-9_-]+")
-STATE_DIR = Path.home() / ".claude" / ".thememate-telemetry"
-INSTALL_ID_FILE = STATE_DIR / "install_id"
-PLUGIN_ROOT = Path(os.environ.get("CLAUDE_PLUGIN_ROOT", Path(__file__).resolve().parent.parent))
-SKILL_MANIFEST = PLUGIN_ROOT / "skills" / "thememate" / "SKILL.md"
+from telemetry_common import (
+    SESSIONS_DIR,
+    SESSION_ID_RE,
+    atomic_write,
+    ensure_state_dir,
+    install_id,
+    send_event,
+    skill_version,
+    telemetry_disabled,
+)
 
 EVENT_FOR_HOOK = {
     "UserPromptSubmit": ("session_start", "skill"),
@@ -49,56 +53,6 @@ STATE_FIELDS = (
 )
 TOKEN_USAGE_KEYS = ("input_tokens", "output_tokens", "cache_creation_input_tokens", "cache_read_input_tokens")
 ACCOUNT_FILE = Path.home() / ".claude.json"
-SEND_SNIPPET = (
-    "import sys,urllib.request\n"
-    "req=urllib.request.Request(sys.argv[1], data=sys.argv[2].encode(), "
-    "headers={'Content-Type':'application/json'}, method='POST')\n"
-    "try:\n"
-    "    urllib.request.urlopen(req, timeout=3)\n"
-    "except Exception:\n"
-    "    pass\n"
-)
-
-
-def endpoint_is_safe(url: str) -> bool:
-    parsed = urlparse(url)
-    if not parsed.hostname:
-        return False
-    if parsed.scheme == "https":
-        return True
-    return parsed.scheme == "http" and parsed.hostname in PLAINTEXT_ALLOWED_HOSTS
-
-
-def ensure_state_dir(path: Path) -> None:
-    path.mkdir(parents=True, exist_ok=True)
-    try:
-        path.chmod(0o700)
-    except Exception:
-        pass
-
-
-def atomic_write(path: Path, data: str, mode: int) -> None:
-    tmp = path.with_name(f"{path.name}.tmp-{os.getpid()}")
-    tmp.write_text(data)
-    tmp.chmod(mode)
-    os.replace(tmp, path)
-
-
-def install_id() -> str:
-    ensure_state_dir(STATE_DIR)
-    if not INSTALL_ID_FILE.exists():
-        INSTALL_ID_FILE.write_text(str(uuid.uuid4()))
-        INSTALL_ID_FILE.chmod(0o600)
-    return INSTALL_ID_FILE.read_text().strip()
-
-
-def skill_version() -> str:
-    try:
-        frontmatter = SKILL_MANIFEST.read_text().split("---")[1]
-        match = re.search(r"^\s*version:\s*(\S+)\s*$", frontmatter, re.MULTILINE)
-        return match.group(1) if match else "unknown"
-    except Exception:
-        return "unknown"
 
 
 def oauth_account() -> dict:
@@ -132,7 +86,7 @@ def seed_session_state(session_id: str, fields: dict) -> None:
     # session_end this session actually used ThemeMate, so it must be created here
     # regardless of whether telemetry_state.py ever gets called during the session.
     fields = {k: v for k, v in fields.items() if v}
-    path = STATE_DIR / "sessions" / f"{session_id}.json"
+    path = SESSIONS_DIR / f"{session_id}.json"
     try:
         ensure_state_dir(path.parent)
         current = {}
@@ -149,7 +103,7 @@ def seed_session_state(session_id: str, fields: dict) -> None:
 
 
 def session_state_path(session_id: str) -> Path:
-    return STATE_DIR / "sessions" / f"{session_id}.json"
+    return SESSIONS_DIR / f"{session_id}.json"
 
 
 def consume_session_state(session_id: str) -> dict:
@@ -211,9 +165,7 @@ def transcript_stats(transcript_path: str | None) -> dict:
 
 
 def main() -> int:
-    if os.environ.get("THEMEMATE_TELEMETRY_DISABLED"):
-        return 0
-    if not endpoint_is_safe(ENDPOINT):
+    if telemetry_disabled():
         return 0
     try:
         hook = json.loads(sys.stdin.read() or "{}")
@@ -246,12 +198,7 @@ def main() -> int:
                 return 0
             payload.update(consume_session_state(payload["session_id"]))
             payload.update(transcript_stats(hook.get("transcript_path")))
-        subprocess.Popen(
-            [sys.executable, "-c", SEND_SNIPPET, ENDPOINT, json.dumps(payload)],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            start_new_session=True,
-        )
+        send_event(payload)
     except Exception:
         return 0
     return 0

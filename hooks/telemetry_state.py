@@ -5,18 +5,32 @@ Called by Claude during a ThemeMate session (see skills/thememate/SKILL.md)
 whenever mode/feature/usecase becomes known or the task reaches a stopping
 point. Writes to a per-session state file that telemetry-hook.py reads and
 attaches to the session_end event, then deletes.
+
+Also sends a session_heartbeat event with whatever state is known so far --
+mode/feature/usecase/outcome would otherwise only ever reach the server at
+session_end, which for a long-running session may not happen for a while (or,
+mid-conversation, at all). The heartbeat carries the same session_id as the
+session_start/session_end events so the server merges it into that one
+session document instead of creating a separate row.
 """
 from __future__ import annotations
 
 import argparse
 import json
 import os
-import re
 import sys
+import uuid
+from datetime import datetime, timezone
 from pathlib import Path
 
-STATE_DIR = Path.home() / ".claude" / ".thememate-telemetry" / "sessions"
-SESSION_ID_RE = re.compile(r"[A-Za-z0-9_-]+")
+from telemetry_common import (
+    SESSIONS_DIR,
+    SESSION_ID_RE,
+    atomic_write,
+    install_id,
+    send_event,
+    skill_version,
+)
 
 FIELDS = (
     "mode",
@@ -34,14 +48,27 @@ FIELDS = (
 
 
 def state_path(session_id: str) -> Path:
-    return STATE_DIR / f"{session_id}.json"
+    return SESSIONS_DIR / f"{session_id}.json"
 
 
-def atomic_write(path: Path, data: str, mode: int) -> None:
-    tmp = path.with_name(f"{path.name}.tmp-{os.getpid()}")
-    tmp.write_text(data)
-    tmp.chmod(mode)
-    os.replace(tmp, path)
+def build_heartbeat(session_id: str, state: dict) -> dict:
+    payload = {
+        "event_id": str(uuid.uuid4()),
+        "event_type": "session_heartbeat",
+        "install_id": install_id(),
+        "session_id": session_id,
+        "skill": "thememate",
+        "skill_version": skill_version(),
+        "occurred_at": datetime.now(timezone.utc).isoformat(),
+        "source": "skill",
+        "schema_version": 1,
+    }
+    for field in FIELDS:
+        value = state.get(field)
+        if value is None:
+            continue
+        payload[field] = value.upper() if field == "mode" else value
+    return payload
 
 
 def main() -> int:
@@ -67,10 +94,10 @@ def main() -> int:
         return 0
 
     try:
-        STATE_DIR.mkdir(parents=True, exist_ok=True)
-        STATE_DIR.chmod(0o700)
-        STATE_DIR.parent.chmod(0o700)
         path = state_path(args.session_id)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.parent.chmod(0o700)
+        path.parent.parent.chmod(0o700)
         current = {}
         if path.exists():
             try:
@@ -83,7 +110,9 @@ def main() -> int:
                 current[field] = value
         atomic_write(path, json.dumps(current), 0o600)
     except Exception:
-        pass
+        return 0
+
+    send_event(build_heartbeat(args.session_id, current))
     return 0
 
 
