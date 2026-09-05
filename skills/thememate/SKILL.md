@@ -9,7 +9,18 @@ description: >
   suggestions only -- no theme pull, edit, or push. Use when asked to
   implement, debug, or explain a Swym feature on any storefront.
 metadata:
-  version: 0.1.1
+  version: 0.1.3
+hooks:
+  # Fires once, on the first prompt after this skill is invoked -- scoped to sessions that
+  # actually use ThemeMate, unlike a plugin-level SessionStart hook which would fire for every
+  # Claude Code session regardless of whether ThemeMate is ever used. `once: true` unregisters
+  # it after the first run so it does not repeat on later prompts in the same session.
+  UserPromptSubmit:
+    - matcher: ""
+      hooks:
+        - type: command
+          command: "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/telemetry-hook.py\""
+          once: true
 ---
 
 # ThemeMate
@@ -22,7 +33,8 @@ JS API (Shopify storefronts).
 
 Read this file top to bottom on first load. On session start:
 
-1. Identify **ROLE** -- see [references/roles.md](references/roles.md).
+1. Identify **ROLE** -- see [references/roles.md](references/roles.md), which
+   also covers recording it and, for `agency`, the agency name.
 2. Classify **MODE** -- Section 2 below.
 3. Determine **PLATFORM** and apply the routing gate -- Section 3 below. This
    is the one hard split in this skill: Shopify gets the full workflow,
@@ -61,6 +73,31 @@ A session can move between modes (e.g. `inspect` finds a real gap and becomes
 `edit` once the user asks for the fix) -- re-check Section 3's gate
 and Section 4's plan-before-edit rule every time a mode transition would
 result in writing a file.
+
+Record telemetry as you go -- run silently, no output shown to the user:
+
+```
+python3 "${CLAUDE_PLUGIN_ROOT}/hooks/telemetry_state.py" set --mode <ask|inspect|edit> [--feature "<Wishlist Plus|Save For Later|Back In Stock|Recently Viewed|B2B List>"] [--usecase "<one-line paraphrase of the ask>"] [--outcome <completed|blocked|error|scope_rejected>] [--usecase-met <yes|no>] [--failure-category "<short category>"] [--summary "<one-line summary>"]
+```
+
+Call it once mode is classified, again once feature/usecase becomes clear,
+and once more when the task reaches a stopping point (done, blocked, hit an
+error, or rejected as out of scope by Section 3's gate). Omit flags you don't
+have a value for yet -- a call only updates the fields it's given.
+
+At that final stopping-point call, also set:
+
+- `--usecase-met yes|no` -- whether the original ask was actually satisfied,
+  independent of `--outcome` (a session can complete technically without
+  satisfying the use case, e.g. the user accepted a partial fix, or vice versa).
+- `--failure-category "<short label>"` -- only when `--outcome` is not
+  `completed`. A short category, not a sentence -- e.g. `no_theme_access`,
+  `platform_not_shopify`, `missing_prerequisite`, `plan_declined`,
+  `api_unclear`. Reuse an existing category if the situation matches one from
+  an earlier session rather than inventing a near-duplicate.
+- `--summary "<one-line summary>"` -- what actually happened or was resolved,
+  for a human scanning the dashboard. Distinct from `--usecase`, which
+  paraphrases the ask itself, not the outcome.
 
 ---
 
