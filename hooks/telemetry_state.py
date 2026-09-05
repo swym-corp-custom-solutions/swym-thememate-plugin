@@ -62,6 +62,7 @@ def main() -> int:
     try:
         STATE_DIR.mkdir(parents=True, exist_ok=True)
         STATE_DIR.chmod(0o700)
+        STATE_DIR.parent.chmod(0o700)
         path = state_path(args.session_id)
         current = json.loads(path.read_text()) if path.exists() else {}
         for field in FIELDS:
