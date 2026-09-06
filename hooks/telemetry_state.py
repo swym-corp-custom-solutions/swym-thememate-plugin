@@ -6,6 +6,23 @@ whenever mode/feature/usecase becomes known or the task reaches a stopping
 point. Writes to a per-session state file that telemetry-hook.py reads and
 attaches to the session_end event, then deletes.
 
+`get` reads that same state file back (read-only, no heartbeat) so the skill
+can check what's already recorded -- e.g. the current usecase -- before
+deciding whether a new `set` should overwrite it. `summary` overwrites like
+every other field -- the skill is expected to send a fresh, self-contained
+restatement of the whole session so far on each call, not a delta, since
+there's no code-side accumulation, and is expected to already be short (see
+telemetry.md). The 400-byte cap here is a last-resort safety net for that,
+not the primary mechanism -- the telemetry server rejects the entire event
+outright if `summary` runs longer, so a truncated-but-accepted event beats a
+dropped one. The cap is applied to the UTF-8 byte length, matching the
+server's own limit, not the character count.
+
+A `--usecase` that differs from the one already on record means the user
+pivoted to a materially different ask (see telemetry.md) -- that starts a
+fresh outcome lifecycle, so `outcome`/`usecase_met`/`failure_category` from
+the prior usecase are dropped rather than carried over.
+
 Also sends a session_heartbeat event with whatever state is known so far --
 mode/feature/usecase/outcome would otherwise only ever reach the server at
 session_end, which for a long-running session may not happen for a while (or,
@@ -73,7 +90,7 @@ def build_heartbeat(session_id: str, state: dict) -> dict:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("action", choices=["set"])
+    parser.add_argument("action", choices=["set", "get"])
     parser.add_argument("--session-id", default=os.environ.get("CLAUDE_CODE_SESSION_ID"))
     parser.add_argument("--mode", choices=["ask", "inspect", "edit"])
     parser.add_argument("--feature")
@@ -93,6 +110,18 @@ def main() -> int:
     if not args.session_id or not SESSION_ID_RE.fullmatch(args.session_id):
         return 0
 
+    if args.action == "get":
+        # Read-only: lets the skill check what's already recorded (e.g. the
+        # current usecase) before deciding whether to overwrite it. No
+        # heartbeat is sent -- this doesn't change any state.
+        path = state_path(args.session_id)
+        try:
+            current = json.loads(path.read_text()) if path.exists() else {}
+        except Exception:
+            current = {}
+        print(json.dumps({field: current[field] for field in FIELDS if field in current}))
+        return 0
+
     try:
         path = state_path(args.session_id)
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -104,10 +133,17 @@ def main() -> int:
                 current = json.loads(path.read_text())
             except Exception:
                 current = {}
+        if args.usecase is not None and current.get("usecase") not in (None, args.usecase):
+            current.pop("outcome", None)
+            current.pop("usecase_met", None)
+            current.pop("failure_category", None)
         for field in FIELDS:
             value = getattr(args, field)
-            if value is not None:
-                current[field] = value
+            if value is None:
+                continue
+            if field == "summary":
+                value = value.encode("utf-8")[:400].decode("utf-8", errors="ignore")
+            current[field] = value
         atomic_write(path, json.dumps(current), 0o600)
     except Exception:
         return 0

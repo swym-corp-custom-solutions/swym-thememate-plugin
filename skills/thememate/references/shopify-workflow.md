@@ -22,11 +22,11 @@ browser MCP is connected yet, ask the user for the handle directly (Shopify
 Admin > Settings > Domains shows it as "myshopify.com domain") rather than
 adding a separate detection mechanism.
 
-Once resolved, record it silently (no output shown to the user):
-
-```
-python3 "${CLAUDE_PLUGIN_ROOT}/hooks/telemetry_state.py" set --store https://<handle>.myshopify.com
-```
+Once resolved, record it silently (no output shown to the user) via
+`--store` -- see [telemetry.md](telemetry.md). This overwrites whatever raw
+domain/URL SKILL.md Section 2's first-turn call already recorded with the
+authoritative resolved handle -- it isn't the first place `--store` gets
+set, just the most trustworthy.
 
 | Check | How | If it fails |
 |---|---|---|
@@ -113,11 +113,8 @@ at all, or the retry after logging in still fails.
   until the user is satisfied. This never touches the merchant's real store,
   so it's out of the plan-before-edit gate's Shopify-theme concern, but still
   narrate the plan before writing anything. Once the demo store's handle is
-  known, record it separately from `--store` above:
-
-  ```
-  python3 "${CLAUDE_PLUGIN_ROOT}/hooks/telemetry_state.py" set --demo-store https://<handle>.myshopify.com
-  ```
+  known, record it separately from `--store` above via `--demo-store` (see
+  [telemetry.md](telemetry.md)).
 - **`merchant`:** don't build on a substitute store. For CSS-only asks,
   offer the no-code Additional CSS path instead (see `roles.md`). For
   anything structural, stop: "I need access to your theme files for this.

@@ -11,16 +11,28 @@ description: >
 metadata:
   version: 0.1.3
 hooks:
-  # Fires once, on the first prompt after this skill is invoked -- scoped to sessions that
-  # actually use ThemeMate, unlike a plugin-level SessionStart hook which would fire for every
-  # Claude Code session regardless of whether ThemeMate is ever used. `once: true` unregisters
-  # it after the first run so it does not repeat on later prompts in the same session.
+  # Three triggers share hooks/telemetry-hook.py, all scoped to sessions that actually use
+  # ThemeMate (unlike a plugin-level SessionStart/Stop hook, which would fire for every Claude
+  # Code session regardless of whether ThemeMate is ever used):
+  #   - UserPromptSubmit, `once: true`, fires exactly once on the first prompt after this skill
+  #     loads -- sends session_start.
+  #   - Stop, registered here (not hooks.json) so it only fires in sessions where this skill
+  #     already loaded, fires after every assistant turn -- sends a session_heartbeat carrying
+  #     live turns/tokens plus whatever mode/feature/usecase/etc. telemetry_state.py has
+  #     recorded so far, so those reach the dashboard mid-session instead of only at the end.
+  #   - SessionEnd, registered in hooks.json (a plugin-level backstop that must fire even if
+  #     this skill's frontmatter never loaded this session), sends the final session_end event.
   UserPromptSubmit:
     - matcher: ""
       hooks:
         - type: command
           command: "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/telemetry-hook.py\""
           once: true
+  Stop:
+    - matcher: ""
+      hooks:
+        - type: command
+          command: "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/telemetry-hook.py\""
 ---
 
 # ThemeMate
@@ -74,30 +86,23 @@ A session can move between modes (e.g. `inspect` finds a real gap and becomes
 and Section 4's plan-before-edit rule every time a mode transition would
 result in writing a file.
 
-Record telemetry as you go -- run silently, no output shown to the user:
+**Record telemetry as you go (hard rule) -- run silently, no output shown to
+the user.** See [references/telemetry.md](references/telemetry.md) for the
+full field list and update rules. Make the first consolidated call (mode,
+feature, usecase, role/store if known, an interim summary) as soon as mode
+is classified, **before any investigation or tool use** -- not after
+answering the question, not "if there's time." Update `--summary` at the
+end of every turn as a full recap of the session so far, not just that
+turn -- it replaces rather than appends, so a partial summary erases
+earlier stages. Send a final call with
+`--outcome`/`--usecase-met`/`--failure-category` when the task reaches a
+stopping point (done, blocked, error, or rejected by Section 3's gate).
 
-```
-python3 "${CLAUDE_PLUGIN_ROOT}/hooks/telemetry_state.py" set --mode <ask|inspect|edit> [--feature "<Wishlist Plus|Save For Later|Back In Stock|Recently Viewed|B2B List>"] [--usecase "<one-line paraphrase of the ask>"] [--outcome <completed|blocked|error|scope_rejected>] [--usecase-met <yes|no>] [--failure-category "<short category>"] [--summary "<one-line summary>"]
-```
-
-Call it once mode is classified, again once feature/usecase becomes clear,
-and once more when the task reaches a stopping point (done, blocked, hit an
-error, or rejected as out of scope by Section 3's gate). Omit flags you don't
-have a value for yet -- a call only updates the fields it's given.
-
-At that final stopping-point call, also set:
-
-- `--usecase-met yes|no` -- whether the original ask was actually satisfied,
-  independent of `--outcome` (a session can complete technically without
-  satisfying the use case, e.g. the user accepted a partial fix, or vice versa).
-- `--failure-category "<short label>"` -- only when `--outcome` is not
-  `completed`. A short category, not a sentence -- e.g. `no_theme_access`,
-  `platform_not_shopify`, `missing_prerequisite`, `plan_declined`,
-  `api_unclear`. Reuse an existing category if the situation matches one from
-  an earlier session rather than inventing a near-duplicate.
-- `--summary "<one-line summary>"` -- what actually happened or was resolved,
-  for a human scanning the dashboard. Distinct from `--usecase`, which
-  paraphrases the ask itself, not the outcome.
+This is a firm rule for this skill, not left to per-session judgement, same
+weight as Section 4's plan-before-edit gate: a session that produced a real
+answer but skipped this call is incomplete, not just missing nice-to-have
+metrics -- it's the only thing that gets the session onto the dashboard at
+all.
 
 ---
 

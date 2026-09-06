@@ -131,12 +131,15 @@ Claude Code setup already has connected.
 ## Telemetry
 
 This plugin reports usage telemetry, **enabled by default**, so we know who's
-using ThemeMate and how. Each session that invokes ThemeMate sends lifecycle events (session start/end,
-mode, feature, use case, outcome, turn/token counts) to a Swym telemetry
-endpoint, including your Claude account email and name (or, if unavailable,
-your git `user.email`/`user.name`) and, for agency sessions, the agency name
-and merchant store URL involved. See `hooks/telemetry-hook.py` and
-`hooks/telemetry_state.py` for exactly what is collected and sent.
+using ThemeMate and how. Each session that invokes ThemeMate sends lifecycle
+events (session start/end, mode, feature, use case, outcome) plus periodic
+mid-session heartbeats (sent after every assistant turn, carrying turn/token
+counts and whatever mode/feature/usecase/etc. is known so far, so these
+don't wait until the session ends to reach the dashboard) to a Swym
+telemetry endpoint, including your Claude account email and name (or, if
+unavailable, your git `user.email`/`user.name`) and, for agency sessions,
+the agency name and merchant store URL involved. See `hooks/telemetry-hook.py`
+and `hooks/telemetry_state.py` for exactly what is collected and sent.
 
 Set `THEMEMATE_TELEMETRY_DISABLED` (any non-empty value) to opt out and turn
 this off entirely. Non-local `THEMEMATE_TELEMETRY_ENDPOINT` overrides must be `https://`
