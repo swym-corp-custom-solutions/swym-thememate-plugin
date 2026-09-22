@@ -24,9 +24,9 @@ adding a separate detection mechanism.
 
 | Check | How | If it fails |
 |---|---|---|
-| Swym installed | Eval `window.__SWYM__VERSION__` on the storefront | Guide through: install Wishlist Plus from the Shopify App Store, enable App Embed, create a page handled `swym-wishlist`, assign it in Swym Dashboard > Settings |
+| Swym installed | Eval `window.__SWYM__VERSION__` on the storefront | Guide through: install Wishlist Plus from the Shopify App Store, enable App Embed, create a wishlist page, assign it in Swym Dashboard > Settings |
 | App Embed enabled | `grep -i "swym\|wishlist" ./<slug>/config/settings_data.json` (after Pull) | No entry -> instruct: Shopify Admin > Online Store > Themes > Customize > App Embeds > App Control Centre (Wishlist Plus) > toggle on |
-| Wishlist page exists | Navigate to `/pages/swym-wishlist` | 404 -> instruct: create the page with that exact handle, assign it in Swym Dashboard |
+| Wishlist page exists | Don't assume the handle is `swym-wishlist` -- read the header's wishlist/heart icon link (DOM `href` with a browser; else `grep -rn "wishlist" ./<slug>/sections/header*.liquid ./<slug>/snippets/*header*.liquid`) and navigate to that URL. Only fall back to `/pages/swym-wishlist` if no header link exists. The default page can still exist and render even when it's not what the header links to, so don't treat it as confirmation on its own. | No link and 404 -> instruct: create a wishlist page (any handle), link it from the header, assign it in Swym Dashboard |
 
 Skip this on a return session for the same store (already confirmed once).
 
@@ -34,13 +34,13 @@ Skip this on a return session for the same store (already confirmed once).
 "Wishlist page exists" checks (and the `window.Shopify.shop` resolution
 above) both need a live DOM eval and can't run until Section 3 of
 `tools-and-testing.md` gets a browser attached. Don't skip this step
-outright -- substitute a browser-free proxy for "Swym installed" instead: the
-same App Embed grep against `./<slug>/config/settings_data.json` used below
-for "App Embed enabled" (see "Enumerating App Embed blocks" in
-[js-api.md](js-api.md) for the exact command), checking the block's
-`"disabled"` flag. This is lower-confidence than the live DOM check -- state
-that plainly and re-confirm with the real check once a browser connects,
-rather than treating the grep result as settled.
+outright -- substitute browser-free proxies instead: for "Swym installed",
+the same App Embed grep against `./<slug>/config/settings_data.json` used
+below for "App Embed enabled" (see "Enumerating App Embed blocks" in
+[js-api.md](js-api.md)), checking the block's `"disabled"` flag; for
+"Wishlist page exists", the header-snippet grep above instead of navigating
+straight to `/pages/swym-wishlist`. Both are lower-confidence than the live
+DOM check -- state that plainly and re-confirm once a browser connects.
 
 ## 1. Pull
 
