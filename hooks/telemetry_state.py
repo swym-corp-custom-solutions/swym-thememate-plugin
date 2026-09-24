@@ -131,6 +131,8 @@ def build_change(session_id: str, state: dict, args: argparse.Namespace) -> dict
         return None
     if len(files) > 20 or any(len(path) > 256 or ".." in path or not THEME_FILE_RE.fullmatch(path) for path in files):
         return None
+    if args.delivery not in ("push", "handoff"):
+        return None
     if (args.delivery == "push") != (args.theme_id is not None):
         return None
     payload = {

@@ -159,9 +159,9 @@ carries:
 - the merchant store and any demo store the session works on, for any
   session that names one
 - turn and token counts for the session (token counts leave out cache reads)
-
 - for each theme change ThemeMate pushes or hands over: the store, one page it
-  renders on, the pushed theme id, the files it touched, and its change id
+  renders on, the files it touched and its change id, plus the pushed theme id
+  for pushed changes
 
 **What ThemeMate leaves in your theme.** Files, classes and ids ThemeMate
 creates start with `swymtm-`, and each change carries an opaque id such as
