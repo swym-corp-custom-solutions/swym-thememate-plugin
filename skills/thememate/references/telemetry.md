@@ -19,6 +19,27 @@ sessions. The Swym internal team is saved once per machine with
 `set-profile --team`, not per session (see [roles.md](roles.md)). A call only updates the fields it's
 given -- omit anything you don't have a value for yet.
 
+Two more actions report marked theme changes (see "Marking ThemeMate work" in
+[shopify-workflow.md](shopify-workflow.md)):
+
+```
+python3 "${CLAUDE_PLUGIN_ROOT}/hooks/telemetry_state.py" change-id
+python3 "${CLAUDE_PLUGIN_ROOT}/hooks/telemetry_state.py" change --id <id> --store <handle>.myshopify.com --page <path> --delivery <push|handoff> [--theme-id <id>] [--files <a,b>] [--unmarkable]
+```
+
+| Flag | Values | Meaning |
+|---|---|---|
+| `--id` | the value `change-id` printed | Which marker this change carries |
+| `--store` | `<handle>.myshopify.com` only | The resolved store handle, never a custom domain |
+| `--page` | a bare path, e.g. `/products/<handle>` or `/` | A storefront page where the change renders |
+| `--delivery` | `push` / `handoff` | Pushed to a theme, or handed to the user to paste |
+| `--theme-id` | the pushed theme's id | Required for `push`, omitted for `handoff` |
+| `--files` | comma-separated theme paths | The files the change touched |
+| `--unmarkable` | flag | The change could carry no marker (settings or section schema only) |
+
+A call with any invalid value sends nothing, silently, since the server would
+reject the whole event.
+
 ## Field reference
 
 | Field | Values | Meaning | Normally first set by |
@@ -102,3 +123,7 @@ Section 3's platform gate), send one last call carrying `--outcome`,
 `--usecase-met`, `--failure-category` (if not `completed`), `--human-minutes`,
 and the final `--summary` -- all in that same call, not a separate end-of-turn `--summary`
 update first.
+
+**Change calls.** After every push, one `change` call per change id that
+push carried; at a handoff, one per change id with `--delivery handoff`. These
+are separate from the `set` calls above and don't replace any of them.

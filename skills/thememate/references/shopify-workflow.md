@@ -172,6 +172,46 @@ Only after the plan is confirmed:
 - One commit per logical unit (asset file, layout injection, snippet each
   reasonably separable) on a feature branch, never on `main` directly.
 
+### Marking ThemeMate work
+
+Every change ThemeMate makes carries a marker, so the telemetry server's daily
+crawler can see on the public storefront whether it went live. This is part of
+the edit, not optional polish.
+
+**Naming.** Every file, class, id, CSS custom property and JS global that
+ThemeMate *creates* starts with `swymtm-` (e.g.
+`snippets/swymtm-wishlist-grid-button.liquid`, `.swymtm-wl-grid-btn`). Never
+rename Swym's own `swym-*` code or ACQ's `swymcs-*` custom code -- Path A keeps
+targeting `.swym-*` selectors; only the new CSS file is `swymtm-`. Naming
+applies even when telemetry is off.
+
+**Change id.** One id per logical change (the same unit as one commit), from:
+
+```
+python3 "${CLAUDE_PLUGIN_ROOT}/hooks/telemetry_state.py" change-id
+```
+
+Never make one up. If it prints nothing, telemetry is off: stamp no id, keep
+the naming. A later session editing a change that already carries a
+`data-swymtm` id keeps that id rather than taking a new one.
+
+**Placement** -- the marker must reach the rendered HTML:
+
+| Change | Put `data-swymtm="<id>"` on |
+|---|---|
+| New CSS/JS asset | its `<link>` / `<script>` include tag, in every layout file it is wired into |
+| New snippet | the snippet's root element (a `{% render %}` tag can't carry attributes) |
+| Edit to existing theme markup | the edited element |
+| Edit with no single element (Liquid logic) | wrap it: `<!-- swymtm:<id> -->` ... `<!-- /swymtm:<id> -->` |
+| Only `settings_data.json` or a section schema | nothing can be marked; report it with `--unmarkable` |
+
+Never use `{% comment %}` as a marker: Shopify strips Liquid comments before
+the page is served, so the crawler can never see it.
+
+**Page.** Note one real storefront path where each change renders (e.g.
+`/products/<handle>` for a PDP change, `/` for a layout-wide one) -- the path
+you checked in local preview. The crawler fetches exactly that page.
+
 ## 4. Local preview
 
 Run the validation order in [tools-and-testing.md](tools-and-testing.md). Do
@@ -192,6 +232,15 @@ reuse one or create a new one.
 Record the chosen theme id and reuse it for later pushes in the same
 session without re-asking, unless the user starts a new task or requests a
 different theme.
+
+After every push, report each change id it carried, one call per id:
+
+```
+python3 "${CLAUDE_PLUGIN_ROOT}/hooks/telemetry_state.py" change --id <id> --store <handle>.myshopify.com --page <path> --delivery push --theme-id <pushed theme id> --files <comma-separated theme paths> [--unmarkable]
+```
+
+Run it silently, like every telemetry call. It sends nothing when telemetry
+is off.
 
 Never `--allow-live` or touch the `live`-role theme. The merchant/agency
 reviews on the unpublished duplicate theme's preview link before deciding
@@ -224,3 +273,7 @@ them a handoff package instead of a PR:
 3. **Where to paste each one** -- a short numbered list: which file, which
    anchor (e.g. "after `{{ content_for_header }}` in `layout/theme.liquid`"),
    and to preview as an unpublished theme copy before publishing.
+
+The code blocks carry the same `swymtm-` naming and `data-swymtm` markers as a
+pushed change (see "Marking ThemeMate work" in step 3), and each change id is
+reported once with `--delivery handoff` and no `--theme-id`.
