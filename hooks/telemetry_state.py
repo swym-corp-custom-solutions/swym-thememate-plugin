@@ -35,12 +35,23 @@ session document instead of creating a separate row.
 once per machine outside the telemetry state so the skill asks it only once. It is
 kept even when telemetry is disabled, since it is the skill's memory of an answer
 and nothing about it is sent unless telemetry is on.
+
+`change-id` prints a fresh id for one marked theme change (`c` + 8 hex digits, from
+`secrets`, never invented by the model, since invented "random" hex repeats), or prints
+nothing when telemetry is off so the skill stamps no id at all. `change` reports one such
+change the moment it is pushed or handed off, as its own `change` event, so the telemetry
+server's daily crawler can check the storefront for that marker. It applies the server's
+own rules before sending (a `.myshopify.com` store, a bare page path, theme-relative files,
+a theme id exactly when delivery is push), because the server rejects a malformed event
+whole and this script never reads the response.
 """
 from __future__ import annotations
 
 import argparse
 import json
 import os
+import re
+import secrets
 import sys
 import uuid
 from datetime import datetime, timezone
@@ -76,6 +87,11 @@ FIELDS = (
 )
 
 
+CHANGE_ID_RE = re.compile(r"c[0-9a-f]{8}")
+STORE_HANDLE_RE = re.compile(r"[a-z0-9][a-z0-9-]*\.myshopify\.com")
+THEME_FILE_RE = re.compile(r"(assets|blocks|config|layout|locales|sections|snippets|templates)/[A-Za-z0-9._/-]+")
+
+
 def state_path(session_id: str) -> Path:
     return SESSIONS_DIR / f"{session_id}.json"
 
@@ -100,12 +116,56 @@ def build_heartbeat(session_id: str, state: dict) -> dict:
     return payload
 
 
+def build_change(session_id: str, state: dict, args: argparse.Namespace) -> dict | None:
+    """The change event, or None when any field would make the server refuse it."""
+    store = (args.merchant_store_url or "").strip().lower()
+    page = args.page or ""
+    files = [path.strip() for path in (args.files or "").split(",") if path.strip()]
+    if not (args.change_id and CHANGE_ID_RE.fullmatch(args.change_id)):
+        return None
+    if not STORE_HANDLE_RE.fullmatch(store):
+        return None
+    if not page.startswith("/") or page.startswith("//") or len(page) > 512:
+        return None
+    if any(char in "?#\\" or ord(char) <= 32 for char in page):
+        return None
+    if len(files) > 20 or any(len(path) > 256 or ".." in path or not THEME_FILE_RE.fullmatch(path) for path in files):
+        return None
+    if args.delivery not in ("push", "handoff"):
+        return None
+    if (args.delivery == "push") != (args.theme_id is not None):
+        return None
+    payload = {
+        "event_id": str(uuid.uuid4()),
+        "event_type": "change",
+        "install_id": install_id(),
+        "session_id": session_id,
+        "skill": "thememate",
+        "skill_version": skill_version(),
+        "occurred_at": datetime.now(timezone.utc).isoformat(),
+        "source": "skill",
+        "schema_version": 1,
+        "change_id": args.change_id,
+        "store": store,
+        "page_path": page,
+        "delivery": args.delivery,
+        "markable": not args.unmarkable,
+        "files": files,
+    }
+    if args.theme_id is not None:
+        payload["pushed_theme_id"] = args.theme_id
+    for field in ("feature", "role"):
+        if state.get(field):
+            payload[field] = state[field]
+    return payload
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("action", choices=["set", "get", "get-profile", "set-profile"])
+    parser.add_argument("action", choices=["set", "get", "get-profile", "set-profile", "change-id", "change"])
     parser.add_argument("--session-id", default=os.environ.get("CLAUDE_CODE_SESSION_ID"))
     parser.add_argument("--mode", choices=["ask", "inspect", "edit"])
-    parser.add_argument("--feature")
+    parser.add_argument("--feature", choices=["Wishlist Plus", "Save For Later", "Back In Stock", "Recently Viewed", "B2B List", "Gift Registry", "Recommendations", "Smart Save", "Other"])
     parser.add_argument("--usecase")
     parser.add_argument("--usecase-met", dest="usecase_met", choices=["yes", "no"])
     parser.add_argument("--outcome", choices=["completed", "blocked", "error", "scope_rejected"])
@@ -116,6 +176,12 @@ def main() -> int:
     parser.add_argument("--store", dest="merchant_store_url")
     parser.add_argument("--demo-store", dest="demo_store_url")
     parser.add_argument("--human-minutes", dest="estimated_human_minutes", type=float)
+    parser.add_argument("--id", dest="change_id")
+    parser.add_argument("--page")
+    parser.add_argument("--delivery", choices=["push", "handoff"])
+    parser.add_argument("--theme-id", dest="theme_id", type=int)
+    parser.add_argument("--files")
+    parser.add_argument("--unmarkable", action="store_true")
     args = parser.parse_args()
 
     if args.action == "get-profile":
@@ -130,10 +196,24 @@ def main() -> int:
         return 0
     if telemetry_disabled():
         return 0
+    if args.action == "change-id":
+        print(f"c{secrets.token_hex(4)}")
+        return 0
 
     # Called silently by the skill mid-session (see SKILL.md) -- never print or
     # exit non-zero for a missing/invalid session id, just no-op.
     if not args.session_id or not SESSION_ID_RE.fullmatch(args.session_id):
+        return 0
+
+    if args.action == "change":
+        try:
+            path = state_path(args.session_id)
+            current = json.loads(path.read_text()) if path.exists() else {}
+        except Exception:
+            current = {}
+        payload = build_change(args.session_id, current, args)
+        if payload is not None:
+            send_event(payload)
         return 0
 
     if args.action == "get":

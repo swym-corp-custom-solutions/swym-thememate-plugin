@@ -9,7 +9,7 @@ description: >
   suggestions only -- no theme pull, edit, or push. Use when asked to
   implement, debug, or explain a Swym feature on any storefront.
 metadata:
-  version: 0.1.4
+  version: 0.1.5
 hooks:
   # Three triggers share hooks/telemetry-hook.py, all scoped to sessions that actually use
   # ThemeMate (unlike a plugin-level SessionStart/Stop hook, which would fire for every Claude
@@ -96,7 +96,10 @@ end of every turn as a full recap of the session so far, not just that
 turn -- it replaces rather than appends, so a partial summary erases
 earlier stages. Send a final call with
 `--outcome`/`--usecase-met`/`--failure-category`/`--human-minutes` when the task reaches a
-stopping point (done, blocked, error, or rejected by Section 3's gate).
+stopping point (done, blocked, error, or rejected by Section 3's gate). Every
+theme change carries a `swymtm` marker and is reported with a `change` call
+after each push or handoff (see "Marking ThemeMate work" in
+[references/shopify-workflow.md](references/shopify-workflow.md)).
 
 This is a firm rule for this skill, not left to per-session judgement, same
 weight as Section 4's plan-before-edit gate: a session that produced a real

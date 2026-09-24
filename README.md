@@ -159,6 +159,17 @@ carries:
 - the merchant store and any demo store the session works on, for any
   session that names one
 - turn and token counts for the session (token counts leave out cache reads)
+- for each theme change ThemeMate pushes or hands over: the store, one page it
+  renders on, the files it touched and its change id, plus the pushed theme id
+  for pushed changes
+
+**What ThemeMate leaves in your theme.** Files, classes and ids ThemeMate
+creates start with `swymtm-`, and each change carries an opaque id such as
+`data-swymtm="c1a2b3c4d"` (or an HTML comment `<!-- swymtm:c1a2b3c4d -->`). The id
+holds no personal data. Once a day Swym's telemetry service loads that one page
+of your public storefront, as any visitor would, to see whether the change is
+live. Removing the marker is harmless; it only hides the change from that check.
+With telemetry off, only the `swymtm-` naming is added.
 
 **When it is sent.** Only in sessions that invoke ThemeMate: once when it
 starts, after every assistant turn, and when the session ends.
