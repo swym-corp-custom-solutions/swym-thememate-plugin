@@ -19,6 +19,16 @@ that suggest an answer without asking:
 
 Don't guess silently when signals conflict -- ask.
 
+Once identified, record it silently (no output shown to the user) via
+`--role` -- see [telemetry.md](telemetry.md) for the call mechanics and
+timing (fold into SKILL.md's first-turn call if resolved by then, otherwise
+a standalone follow-up call), as `agency`, `merchant` or `swym_internal`.
+The Swym team is not part of the role: it's saved separately, see
+`swym_internal` below.
+
+For `agency`, the agency name is taken automatically from the Claude account's
+organization name. Don't ask for it and don't record it yourself.
+
 ## agency
 
 An agency partner implementing or maintaining Swym features on a merchant's
@@ -36,9 +46,17 @@ path (Section on Path A/B in
 
 ## swym_internal
 
-Swym staff -- Success, Support, or ACQ. Ask which team once per session if not
-already stated; do not re-ask if they've already said. Team affects framing
-of the output:
+Swym staff -- ACQ, Success, Support, or Other. The team is asked once per
+machine and reused in every later session:
+
+1. Run `python3 "${CLAUDE_PLUGIN_ROOT}/hooks/telemetry_state.py" get-profile`
+   silently. If it returns a `team`, use it and don't ask.
+2. Otherwise ask once: "Which Swym team are you on: ACQ, Success, Support, or
+   Other?" Save the answer silently with
+   `python3 "${CLAUDE_PLUGIN_ROOT}/hooks/telemetry_state.py" set-profile --team <acq|success|support|other>`.
+3. If the user later says they've moved teams, save the new one the same way.
+
+Team affects framing of the output:
 
 - **Success / ACQ** -- typically pre- or post-sale, framing implementation
   suggestions or feature walkthroughs for a merchant conversation. In
@@ -56,6 +74,8 @@ of the output:
   reaches `edit`, default to Path A as the primary approach --
   Support fixes are typically restoring a broken default, not building
   something custom. Only reach for Path B when Path A can't resolve it.
+- **Other** -- no team-specific defaults. Choose Path A or Path B from the
+  ask itself, as for `agency`.
 
 `swym_internal` sessions may reference Swym-internal tooling or team routing
 in their own output; `agency` and `merchant` sessions should not see that

@@ -10,6 +10,12 @@ Wix) -- no theme pull, edit, or push there.
 Who this is for: Agency Partners, Merchants, and Swym Internal staff
 (Success, Support, ACQ).
 
+> **Privacy notice: this plugin tracks skill usage with your email and name.**
+> Every ThemeMate session sends usage events to Swym that include your email
+> address and name. Telemetry is on by default, and the first ThemeMate
+> session on a machine shows this notice once. See [Telemetry](#telemetry)
+> for exactly what is sent, how to go anonymous, and how to opt out.
+
 ## Install
 
 Marketplace: `swym-corp-custom-solutions/swym-thememate-plugin`. Plugin name: `swym`.
@@ -84,6 +90,11 @@ pushing anything -- see SKILL.md Section 4.
 .claude-plugin/
   plugin.json       # plugin manifest
   marketplace.json  # self-referencing marketplace so this repo is installable on its own
+hooks/
+  hooks.json          # lifecycle hook registration
+  telemetry-hook.py   # non-blocking lifecycle event emitter
+  telemetry_state.py  # per-session state recorder, read by telemetry-hook.py at session end
+  telemetry_common.py # shared opt-out, anonymous mode, identity and send helpers
 skills/thememate/
   SKILL.md          # entry point: roles, modes, platform routing, the plan-before-edit gate
   references/
@@ -123,6 +134,55 @@ gh auth login
 **5. A browser-automation MCP server**, for local-preview validation --
 either the Playwright MCP or the `chrome-devtools` MCP, whichever your
 Claude Code setup already has connected.
+
+## Telemetry
+
+**We track ThemeMate skill usage, and every event is tied to your email
+address and name.** Telemetry is enabled by default.
+
+**Who you are.** Every event (session start, each heartbeat, session end)
+carries:
+- your email address and name, taken from your Claude account
+  (`~/.claude.json`), or from your git `user.email` / `user.name` if the
+  Claude account has none
+- a random install ID generated once per machine
+- for agency sessions, your Claude account's organization name as the agency
+  name
+- for Swym staff, your team (ACQ, Success, Support or Other), asked once and
+  saved in `~/.claude/.thememate/profile.json` (delete that file to be asked
+  again)
+
+**What you did.** Alongside your identity, events carry:
+- the mode, Swym feature, outcome, and the use case and summary of the task.
+  The use case and summary are free-text paraphrases of your request, so they
+  can include whatever details you gave
+- the merchant store and any demo store the session works on, for any
+  session that names one
+- turn and token counts for the session (token counts leave out cache reads)
+
+**When it is sent.** Only in sessions that invoke ThemeMate: once when it
+starts, after every assistant turn, and when the session ends.
+
+**Where it goes.** `https://swym-thememate-telemetry.internalswym.com/v1/telemetry/events`,
+a Swym internal service. See `hooks/telemetry-hook.py`,
+`hooks/telemetry_state.py` and `hooks/telemetry_common.py` for exactly what
+is collected and sent.
+
+**Going anonymous.** Set `THEMEMATE_TELEMETRY_ANONYMOUS` to any non-empty
+value and your email address and name are left out of every event. Everything
+else is still sent, including the agency name. Anonymous events use a separate
+install ID, so they can't be linked to sessions you sent before with your
+identity.
+
+**Opting out.** Set `THEMEMATE_TELEMETRY_DISABLED` to any non-empty value and
+nothing is sent or kept on disk, apart from your saved team. It overrides
+anonymous mode.
+
+To keep either setting across sessions, add it to `~/.claude/settings.json`:
+
+```json
+{ "env": { "THEMEMATE_TELEMETRY_ANONYMOUS": "1" } }
+```
 
 ## Known gaps
 
