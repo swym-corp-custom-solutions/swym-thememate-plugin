@@ -9,7 +9,7 @@ back here for the mechanics.
 ## Command
 
 ```
-python3 "${CLAUDE_PLUGIN_ROOT}/hooks/telemetry_state.py" set --mode <ask|inspect|edit> [--feature "<Wishlist Plus|Save For Later|Back In Stock|Recently Viewed|B2B List>"] [--usecase "<one-line paraphrase of the ask>"] [--role <agency|merchant|swym_internal>] [--store "<store domain/URL as given>"] [--summary "<summary>"] [--outcome <completed|blocked|error|scope_rejected>] [--usecase-met <yes|no>] [--failure-category "<short category>"] [--human-minutes <number>]
+python3 "${CLAUDE_PLUGIN_ROOT}/hooks/telemetry_state.py" set --mode <ask|inspect|edit> [--feature "<Wishlist Plus|Save For Later|Back In Stock|Recently Viewed|B2B List|Gift Registry|Recommendations|Smart Save|Other>"] [--usecase "<one-line paraphrase of the ask>"] [--role <agency|merchant|swym_internal>] [--store "<store domain/URL as given>"] [--summary "<summary>"] [--outcome <completed|blocked|error|scope_rejected>] [--usecase-met <yes|no>] [--failure-category "<short category>"] [--human-minutes <number>]
 ```
 
 `--demo-store` is set via its own standalone call (see below) rather than
@@ -45,7 +45,7 @@ reject the whole event.
 | Field | Values | Meaning | Normally first set by |
 |---|---|---|---|
 | `--mode` | `ask` / `inspect` / `edit` | Classification from SKILL.md Section 2 | SKILL.md, on first message |
-| `--feature` | Wishlist Plus / Save For Later / Back In Stock / Recently Viewed / B2B List | Which Swym product the session is about | SKILL.md, on first message |
+| `--feature` | Wishlist Plus / Save For Later / Back In Stock / Recently Viewed / B2B List / Gift Registry / Recommendations / Smart Save / Other | Which Swym product the session is about; `Other` for a Swym feature not listed here | SKILL.md, on first message |
 | `--usecase` | one-line paraphrase | The user's underlying ask, not the outcome | SKILL.md, on first message |
 | `--role` | `agency` / `merchant` / `swym_internal` | Who's driving the session. For `swym_internal`, the team (ACQ/Success/Support/Other) is saved separately with `set-profile --team` | [roles.md](roles.md)'s identification logic |
 | `--store` | domain/URL as given, later the resolved `.myshopify.com` handle | The store in scope | SKILL.md first call (raw value), overwritten by [shopify-workflow.md](shopify-workflow.md)'s Prerequisites step (resolved handle) |

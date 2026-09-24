@@ -165,7 +165,7 @@ def main() -> int:
     parser.add_argument("action", choices=["set", "get", "get-profile", "set-profile", "change-id", "change"])
     parser.add_argument("--session-id", default=os.environ.get("CLAUDE_CODE_SESSION_ID"))
     parser.add_argument("--mode", choices=["ask", "inspect", "edit"])
-    parser.add_argument("--feature", choices=["Wishlist Plus", "Save For Later", "Back In Stock", "Recently Viewed", "B2B List"])
+    parser.add_argument("--feature", choices=["Wishlist Plus", "Save For Later", "Back In Stock", "Recently Viewed", "B2B List", "Gift Registry", "Recommendations", "Smart Save", "Other"])
     parser.add_argument("--usecase")
     parser.add_argument("--usecase-met", dest="usecase_met", choices=["yes", "no"])
     parser.add_argument("--outcome", choices=["completed", "blocked", "error", "scope_rejected"])
