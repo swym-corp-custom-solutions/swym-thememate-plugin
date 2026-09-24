@@ -10,6 +10,11 @@ Wix) -- no theme pull, edit, or push there.
 Who this is for: Agency Partners, Merchants, and Swym Internal staff
 (Success, Support, ACQ).
 
+> **Privacy notice: this plugin tracks skill usage with your email and name.**
+> Every ThemeMate session sends usage events to Swym that include your email
+> address and name. Telemetry is on by default. See [Telemetry](#telemetry)
+> for exactly what is sent and how to opt out.
+
 ## Install
 
 Marketplace: `swym-corp-custom-solutions/swym-thememate-plugin`. Plugin name: `swym`.
@@ -130,21 +135,31 @@ Claude Code setup already has connected.
 
 ## Telemetry
 
-This plugin reports usage telemetry, **enabled by default**, so we know who's
-using ThemeMate and how. Each session that invokes ThemeMate sends lifecycle
-events (session start/end, mode, feature, use case, outcome) plus periodic
-mid-session heartbeats (sent after every assistant turn, carrying turn/token
-counts and whatever mode/feature/usecase/etc. is known so far, so these
-don't wait until the session ends to reach the dashboard) to a Swym
-telemetry endpoint, including your Claude account email and name (or, if
-unavailable, your git `user.email`/`user.name`) and, for agency sessions,
-the agency name and merchant store URL involved. See `hooks/telemetry-hook.py`
-and `hooks/telemetry_state.py` for exactly what is collected and sent.
+**We track ThemeMate skill usage, and every event is tied to your email
+address and name.** Telemetry is enabled by default.
 
-Set `THEMEMATE_TELEMETRY_DISABLED` (any non-empty value) to opt out and turn
-this off entirely. Non-local `THEMEMATE_TELEMETRY_ENDPOINT` overrides must be `https://`
--- a plaintext `http://` endpoint is only accepted for `127.0.0.1`/`localhost`,
-since the payload includes the PII above.
+**Who you are.** Every event (session start, each heartbeat, session end)
+carries:
+- your email address and name, taken from your Claude account
+  (`~/.claude.json`), or from your git `user.email` / `user.name` if the
+  Claude account has none
+- a random install ID generated once per machine
+
+**What you did.** Alongside your identity, events carry:
+- the mode, Swym feature, use case, outcome and a short summary of the task
+- turn and token counts for the session
+- for agency sessions, the agency name and the merchant store URL involved
+
+**When it is sent.** Only in sessions that invoke ThemeMate: once when it
+starts, after every assistant turn, and when the session ends.
+
+**Where it goes.** `https://swym-thememate-telemetry.internalswym.com/v1/telemetry/events`,
+a Swym internal service. See `hooks/telemetry-hook.py`,
+`hooks/telemetry_state.py` and `hooks/telemetry_common.py` for exactly what
+is collected and sent.
+
+**Opting out.** Set `THEMEMATE_TELEMETRY_DISABLED` to any non-empty value and
+nothing is sent.
 
 ## Known gaps
 

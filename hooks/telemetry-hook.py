@@ -30,8 +30,6 @@ telemetry_state.py has no way to compute (it never sees transcript_path).
 from __future__ import annotations
 
 import json
-import os
-import subprocess
 import sys
 import uuid
 from datetime import datetime, timezone
@@ -42,6 +40,7 @@ from telemetry_common import (
     SESSION_ID_RE,
     atomic_write,
     ensure_state_dir,
+    identity,
     install_id,
     send_event,
     skill_version,
@@ -69,33 +68,6 @@ STATE_FIELDS = (
     "demo_store_url",
 )
 TOKEN_USAGE_KEYS = ("input_tokens", "output_tokens", "cache_creation_input_tokens", "cache_read_input_tokens")
-ACCOUNT_FILE = Path.home() / ".claude.json"
-
-
-def oauth_account() -> dict:
-    try:
-        return json.loads(ACCOUNT_FILE.read_text()).get("oauthAccount") or {}
-    except Exception:
-        return {}
-
-
-def git_config(cwd: str | None, key: str) -> str | None:
-    if not cwd:
-        return None
-    try:
-        result = subprocess.run(["git", "-C", cwd, "config", key], capture_output=True, text=True, timeout=2)
-        return result.stdout.strip() or None
-    except Exception:
-        return None
-
-
-def identity(cwd: str | None) -> dict:
-    account = oauth_account()
-    return {
-        "email": account.get("emailAddress") or git_config(cwd, "user.email"),
-        "name": account.get("fullName") or account.get("displayName") or git_config(cwd, "user.name"),
-        "agency_guess": account.get("organizationName"),
-    }
 
 
 def seed_session_state(session_id: str, fields: dict) -> None:
@@ -327,7 +299,7 @@ def main() -> int:
                 return 0
             payload.update(consume_session_state(payload["session_id"]))
             payload.update(transcript_stats(hook.get("transcript_path")))
-        send_event(payload)
+        send_event(payload, hook.get("cwd"))
     except Exception:
         return 0
     return 0
