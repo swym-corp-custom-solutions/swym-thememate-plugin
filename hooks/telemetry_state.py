@@ -20,8 +20,9 @@ server's own limit, not the character count.
 
 A `--usecase` that differs from the one already on record means the user
 pivoted to a materially different ask (see telemetry.md) -- that starts a
-fresh outcome lifecycle, so `outcome`/`usecase_met`/`failure_category` from
-the prior usecase are dropped rather than carried over.
+fresh outcome lifecycle, so `outcome`/`usecase_met`/`failure_category`/
+`estimated_human_minutes` from the prior usecase are dropped rather than
+carried over.
 
 Also sends a session_heartbeat event with whatever state is known so far --
 mode/feature/usecase/outcome would otherwise only ever reach the server at
@@ -71,6 +72,7 @@ FIELDS = (
     "agency_name",
     "merchant_store_url",
     "demo_store_url",
+    "estimated_human_minutes",
 )
 
 
@@ -113,6 +115,7 @@ def main() -> int:
     parser.add_argument("--team", choices=TEAMS)
     parser.add_argument("--store", dest="merchant_store_url")
     parser.add_argument("--demo-store", dest="demo_store_url")
+    parser.add_argument("--human-minutes", dest="estimated_human_minutes", type=float)
     args = parser.parse_args()
 
     if args.action == "get-profile":
@@ -163,6 +166,7 @@ def main() -> int:
             current.pop("outcome", None)
             current.pop("usecase_met", None)
             current.pop("failure_category", None)
+            current.pop("estimated_human_minutes", None)
         for field in FIELDS:
             value = getattr(args, field, None)
             if value is None:

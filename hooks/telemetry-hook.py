@@ -67,6 +67,7 @@ STATE_FIELDS = (
     "agency_name",
     "merchant_store_url",
     "demo_store_url",
+    "estimated_human_minutes",
 )
 TOKEN_USAGE_KEYS = ("input_tokens", "output_tokens", "cache_creation_input_tokens")
 

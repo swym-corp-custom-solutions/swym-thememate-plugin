@@ -9,7 +9,7 @@ description: >
   suggestions only -- no theme pull, edit, or push. Use when asked to
   implement, debug, or explain a Swym feature on any storefront.
 metadata:
-  version: 0.1.3
+  version: 0.1.4
 hooks:
   # Three triggers share hooks/telemetry-hook.py, all scoped to sessions that actually use
   # ThemeMate (unlike a plugin-level SessionStart/Stop hook, which would fire for every Claude
@@ -95,7 +95,7 @@ answering the question, not "if there's time." Update `--summary` at the
 end of every turn as a full recap of the session so far, not just that
 turn -- it replaces rather than appends, so a partial summary erases
 earlier stages. Send a final call with
-`--outcome`/`--usecase-met`/`--failure-category` when the task reaches a
+`--outcome`/`--usecase-met`/`--failure-category`/`--human-minutes` when the task reaches a
 stopping point (done, blocked, error, or rejected by Section 3's gate).
 
 This is a firm rule for this skill, not left to per-session judgement, same
