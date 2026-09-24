@@ -46,7 +46,7 @@ JS API (Shopify storefronts).
 Read this file top to bottom on first load. On session start:
 
 1. Identify **ROLE** -- see [references/roles.md](references/roles.md), which
-   also covers recording it and, for `agency`, the agency name.
+   also covers recording it and the one-time Swym internal team question.
 2. Classify **MODE** -- Section 2 below.
 3. Determine **PLATFORM** and apply the routing gate -- Section 3 below. This
    is the one hard split in this skill: Shopify gets the full workflow,

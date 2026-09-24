@@ -9,11 +9,14 @@ back here for the mechanics.
 ## Command
 
 ```
-python3 "${CLAUDE_PLUGIN_ROOT}/hooks/telemetry_state.py" set --mode <ask|inspect|edit> [--feature "<Wishlist Plus|Save For Later|Back In Stock|Recently Viewed|B2B List>"] [--usecase "<one-line paraphrase of the ask>"] [--role <internal|agency|merchant|support>] [--store "<store domain/URL as given>"] [--summary "<summary>"] [--outcome <completed|blocked|error|scope_rejected>] [--usecase-met <yes|no>] [--failure-category "<short category>"]
+python3 "${CLAUDE_PLUGIN_ROOT}/hooks/telemetry_state.py" set --mode <ask|inspect|edit> [--feature "<Wishlist Plus|Save For Later|Back In Stock|Recently Viewed|B2B List>"] [--usecase "<one-line paraphrase of the ask>"] [--role <agency|merchant|swym_internal>] [--store "<store domain/URL as given>"] [--summary "<summary>"] [--outcome <completed|blocked|error|scope_rejected>] [--usecase-met <yes|no>] [--failure-category "<short category>"]
 ```
 
-`--agency` and `--demo-store` are set via their own standalone calls (see
-below) rather than in the flags above. A call only updates the fields it's
+`--demo-store` is set via its own standalone call (see below) rather than
+in the flags above. The agency name is not a flag: it comes from the Claude
+account's organization name automatically, and is only sent for `agency`
+sessions. The Swym internal team is saved once per machine with
+`set-profile --team`, not per session (see [roles.md](roles.md)). A call only updates the fields it's
 given -- omit anything you don't have a value for yet.
 
 ## Field reference
@@ -23,8 +26,7 @@ given -- omit anything you don't have a value for yet.
 | `--mode` | `ask` / `inspect` / `edit` | Classification from SKILL.md Section 2 | SKILL.md, on first message |
 | `--feature` | Wishlist Plus / Save For Later / Back In Stock / Recently Viewed / B2B List | Which Swym product the session is about | SKILL.md, on first message |
 | `--usecase` | one-line paraphrase | The user's underlying ask, not the outcome | SKILL.md, on first message |
-| `--role` | `internal` / `agency` / `merchant` / `support` | Who's driving the session -- `support` = swym_internal+Support, `internal` = swym_internal+Success/ACQ | [roles.md](roles.md)'s identification logic |
-| `--agency` | agency name | Only for `agency` role | [roles.md](roles.md) |
+| `--role` | `agency` / `merchant` / `swym_internal` | Who's driving the session. For `swym_internal`, the team (ACQ/Success/Support/Other) is saved separately with `set-profile --team` | [roles.md](roles.md)'s identification logic |
 | `--store` | domain/URL as given, later the resolved `.myshopify.com` handle | The store in scope | SKILL.md first call (raw value), overwritten by [shopify-workflow.md](shopify-workflow.md)'s Prerequisites step (resolved handle) |
 | `--demo-store` | `.myshopify.com` handle | A substitute store used when the real theme isn't reachable, kept separate from `--store` | [shopify-workflow.md](shopify-workflow.md) |
 | `--summary` | short string, under ~400 chars | What's happened in the session so far, for a human scanning the dashboard | SKILL.md, updated repeatedly -- see "Updating `--summary`" below |
@@ -49,7 +51,7 @@ Include an interim `--summary` in that same first call: a one-line statement
 of what you're doing in response to the ask (e.g. "Checking whether the
 wishlist grid is Swym's default UI or a custom build"), not an outcome.
 
-**Late-resolving fields.** If role, agency name, or the resolved store
+**Late-resolving fields.** If role or the resolved store
 handle become known after the first call, send a standalone call for just
 that field -- a call only updates the fields it's given, so this doesn't
 conflict with what's already stored. The store-handle overwrite (raw

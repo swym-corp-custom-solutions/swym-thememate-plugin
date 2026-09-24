@@ -40,10 +40,11 @@ from telemetry_common import (
     SESSION_ID_RE,
     atomic_write,
     ensure_state_dir,
-    identity,
     install_id,
+    oauth_account,
     send_event,
     skill_version,
+    take_notice,
     telemetry_disabled,
 )
 
@@ -67,7 +68,7 @@ STATE_FIELDS = (
     "merchant_store_url",
     "demo_store_url",
 )
-TOKEN_USAGE_KEYS = ("input_tokens", "output_tokens", "cache_creation_input_tokens", "cache_read_input_tokens")
+TOKEN_USAGE_KEYS = ("input_tokens", "output_tokens", "cache_creation_input_tokens")
 
 
 def seed_session_state(session_id: str, fields: dict) -> None:
@@ -111,9 +112,13 @@ def consume_session_state(session_id: str) -> dict:
     if not path.exists():
         return {}
     state = _read_session_state(path)
-    path.unlink(missing_ok=True)
-    stop_progress_path(session_id).unlink(missing_ok=True)
+    discard_session_files(session_id)
     return state
+
+
+def discard_session_files(session_id: str) -> None:
+    session_state_path(session_id).unlink(missing_ok=True)
+    stop_progress_path(session_id).unlink(missing_ok=True)
 
 
 def peek_session_state(session_id: str) -> dict:
@@ -243,10 +248,15 @@ def transcript_progress(transcript_path: str | None, offset: int, seen_ids: set)
 
 
 def main() -> int:
-    if telemetry_disabled():
-        return 0
     try:
         hook = json.loads(sys.stdin.read() or "{}")
+        session_id = hook.get("session_id")
+        if not session_id or not SESSION_ID_RE.fullmatch(session_id):
+            return 0
+        if telemetry_disabled():
+            if hook.get("hook_event_name") == "SessionEnd":
+                discard_session_files(session_id)
+            return 0
         mapping = EVENT_FOR_HOOK.get(hook.get("hook_event_name"))
         if mapping is None:
             return 0
@@ -255,23 +265,19 @@ def main() -> int:
             "event_id": str(uuid.uuid4()),
             "event_type": event_type,
             "install_id": install_id(),
-            "session_id": hook.get("session_id"),
+            "session_id": session_id,
             "skill": "thememate",
             "skill_version": skill_version(),
             "occurred_at": datetime.now(timezone.utc).isoformat(),
             "source": source,
             "schema_version": 1,
         }
-        if not payload["session_id"] or not SESSION_ID_RE.fullmatch(payload["session_id"]):
-            return 0
         if event_type == "session_start":
-            ident = identity(hook.get("cwd"))
-            if ident.get("email"):
-                payload["email"] = ident["email"]
-            if ident.get("name"):
-                payload["name"] = ident["name"]
-            seed_session_state(payload["session_id"], {"agency_name": ident.get("agency_guess")})
+            seed_session_state(session_id, {"agency_name": oauth_account().get("organizationName")})
         if hook.get("hook_event_name") == "Stop":
+            notice = take_notice()
+            if notice:
+                print(json.dumps({"systemMessage": notice}))
             if not session_state_path(payload["session_id"]).exists():
                 return 0
             progress = load_stop_progress(payload["session_id"])

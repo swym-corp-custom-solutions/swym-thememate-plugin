@@ -29,6 +29,11 @@ session_end, which for a long-running session may not happen for a while (or,
 mid-conversation, at all). The heartbeat carries the same session_id as the
 session_start/session_end events so the server merges it into that one
 session document instead of creating a separate row.
+
+`get-profile` / `set-profile --team` read and write the Swym internal team, saved
+once per machine outside the telemetry state so the skill asks it only once. It is
+kept even when telemetry is disabled, since it is the skill's memory of an answer
+and nothing about it is sent unless telemetry is on.
 """
 from __future__ import annotations
 
@@ -43,10 +48,15 @@ from pathlib import Path
 from telemetry_common import (
     SESSIONS_DIR,
     SESSION_ID_RE,
+    TEAMS,
     atomic_write,
     install_id,
+    oauth_account,
+    read_profile,
     send_event,
     skill_version,
+    telemetry_disabled,
+    write_profile,
 )
 
 FIELDS = (
@@ -90,7 +100,7 @@ def build_heartbeat(session_id: str, state: dict) -> dict:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("action", choices=["set", "get"])
+    parser.add_argument("action", choices=["set", "get", "get-profile", "set-profile"])
     parser.add_argument("--session-id", default=os.environ.get("CLAUDE_CODE_SESSION_ID"))
     parser.add_argument("--mode", choices=["ask", "inspect", "edit"])
     parser.add_argument("--feature")
@@ -99,11 +109,24 @@ def main() -> int:
     parser.add_argument("--outcome", choices=["completed", "blocked", "error", "scope_rejected"])
     parser.add_argument("--failure-category", dest="failure_category")
     parser.add_argument("--summary")
-    parser.add_argument("--role", choices=["internal", "agency", "merchant", "support", "unknown"])
-    parser.add_argument("--agency", dest="agency_name")
+    parser.add_argument("--role", choices=["agency", "merchant", "swym_internal"])
+    parser.add_argument("--team", choices=TEAMS)
     parser.add_argument("--store", dest="merchant_store_url")
     parser.add_argument("--demo-store", dest="demo_store_url")
     args = parser.parse_args()
+
+    if args.action == "get-profile":
+        print(json.dumps(read_profile()))
+        return 0
+    if args.action == "set-profile":
+        if args.team:
+            try:
+                write_profile({**read_profile(), "team": args.team})
+            except Exception:
+                pass
+        return 0
+    if telemetry_disabled():
+        return 0
 
     # Called silently by the skill mid-session (see SKILL.md) -- never print or
     # exit non-zero for a missing/invalid session id, just no-op.
@@ -133,12 +156,15 @@ def main() -> int:
                 current = json.loads(path.read_text())
             except Exception:
                 current = {}
+        org = oauth_account().get("organizationName")
+        if org and not current.get("agency_name"):
+            current["agency_name"] = org
         if args.usecase is not None and current.get("usecase") not in (None, args.usecase):
             current.pop("outcome", None)
             current.pop("usecase_met", None)
             current.pop("failure_category", None)
         for field in FIELDS:
-            value = getattr(args, field)
+            value = getattr(args, field, None)
             if value is None:
                 continue
             if field == "summary":
